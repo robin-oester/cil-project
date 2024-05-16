@@ -1,0 +1,87 @@
+name: linting
+on: [pull_request]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  flake8:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup conda
+        uses: ./.github/actions/conda
+
+      - name: Flake8
+        run: |
+          conda run -n cil-project flake8 --version
+          conda run -n cil-project flake8 src --statistics
+
+  mypy-typechecking:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup conda
+        uses: ./.github/actions/conda
+
+      - name: Mypy
+        run: |
+          conda run -n cil-project mypy --version
+          conda run -n cil-project mypy src
+
+  pylint:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup conda
+        uses: ./.github/actions/conda
+
+      - name: Pylint
+        run: |
+          conda run -n cil-project pylint --version
+          conda run -n cil-project pylint src
+
+  isort:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup conda
+        uses: ./.github/actions/conda
+
+      - name: Isort
+        run: |
+          conda run -n cil-project isort --version
+          conda run -n cil-project isort src --check --diff
+
+  black:
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Setup conda
+        uses: ./.github/actions/conda
+
+      - name: Black
+        run: |
+          conda run -n cil-project black --version
+          conda run -n cil-project black --check src --verbose --config black.toml

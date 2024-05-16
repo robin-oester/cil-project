@@ -1,0 +1,14 @@
+# Environment file for cil-project
+
+name: cil-project
+
+channels:
+  - conda-forge
+  - anaconda
+  - pytorch
+
+dependencies:
+  - python>=3.10
+  - numpy
+  - pandas
+  - pip
