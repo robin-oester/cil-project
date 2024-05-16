@@ -8,7 +8,7 @@ NAME = 'cil-project'
 DESCRIPTION = 'A project for the CIL24 course at ETH Zurich.'
 URL = 'https://github.com/robin-oester/cil-project'
 EMAIL = 'roester@student.ethz.ch'
-AUTHOR = 'Piero Neri, Lukas, Robin Oester'
+AUTHOR = 'Piero Neri, Lukas Nüesch, Robin Oester'
 REQUIRES_PYTHON = '>=3.10'
 VERSION = '0.0.1'
 
