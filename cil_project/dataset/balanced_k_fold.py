@@ -2,7 +2,8 @@ from collections import defaultdict
 from typing import Iterator
 
 import numpy as np
-from torch.utils.data import Dataset
+
+from .ratings_dataset import RatingsDataset
 
 
 class BalancedKFold:
@@ -14,17 +15,12 @@ class BalancedKFold:
         self.num_folds = num_folds
         self.shuffle = shuffle
 
-    def split(self, dataset: Dataset) -> Iterator[tuple[list[int], list[int]]]:
+    def split(self, dataset: RatingsDataset) -> Iterator[tuple[list[int], list[int]]]:
         user_dict: dict[int, list[int]] = defaultdict(list)  # missing key returns empty list
 
         # Organize indices by user id
         for idx, ((user_id, _), _) in enumerate(dataset):
             user_dict[user_id].append(idx)
-
-        if self.shuffle:
-            for user_id, indices in user_dict.items():
-                np.random.shuffle(indices)  # Shuffle indices for randomness
-                user_dict[user_id] = indices
 
         folds: list[list[int]] = [[] for _ in range(self.num_folds)]
 
