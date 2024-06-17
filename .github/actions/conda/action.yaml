@@ -46,7 +46,6 @@ runs:
         id: cache
 
       - name: Setup requirements
-        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           conda update -n base -c defaults conda
           conda update --all
