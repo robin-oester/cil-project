@@ -20,7 +20,7 @@ jobs:
       - name: Flake8
         run: |
           conda run -n cil-project flake8 --version
-          conda run -n cil-project flake8 src --statistics
+          conda run -n cil-project flake8 cil_project --statistics
 
   mypy-typechecking:
     timeout-minutes: 20
@@ -36,7 +36,7 @@ jobs:
       - name: Mypy
         run: |
           conda run -n cil-project mypy --version
-          conda run -n cil-project mypy src
+          conda run -n cil-project mypy cil_project
 
   pylint:
     timeout-minutes: 20
@@ -52,7 +52,7 @@ jobs:
       - name: Pylint
         run: |
           conda run -n cil-project pylint --version
-          conda run -n cil-project pylint src
+          conda run -n cil-project pylint cil_project
 
   isort:
     timeout-minutes: 20
@@ -68,7 +68,7 @@ jobs:
       - name: Isort
         run: |
           conda run -n cil-project isort --version
-          conda run -n cil-project isort src --check --diff
+          conda run -n cil-project isort cil_project --check --diff
 
   black:
     timeout-minutes: 20
@@ -84,4 +84,4 @@ jobs:
       - name: Black
         run: |
           conda run -n cil-project black --version
-          conda run -n cil-project black --check src --verbose --config black.toml
+          conda run -n cil-project black --check cil_project --verbose --config black.toml

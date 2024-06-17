@@ -17,6 +17,12 @@ pip install -r dev-requirements.txt
 chmod +x run_code_compliance.sh
 ```
 
+If the environment.yml file is updated, additionally run
+```
+conda env update -f environment.yml --prune
+```
+to keep the dependencies up to date.
+
 ## 🤝 Contributing
 In order to keep the project organized, we propose the following workflow for contribution:
 1. Create new issue.

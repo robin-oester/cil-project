@@ -3,8 +3,8 @@ echo "Running CIL Project code compliance check"
 echo "Running auto-formatters"
 
 conda run -n cil-project isort . > /dev/null
-conda run -n cil-project autopep8 src --recursive --in-place --pep8-passes 2000 > /dev/null
-conda run -n cil-project black src --verbose --config black.toml > /dev/null
+conda run -n cil-project autopep8 cil_project --recursive --in-place --pep8-passes 2000 > /dev/null
+conda run -n cil-project black cil_project --verbose --config black.toml > /dev/null
 
 echo "Running linters"
 
@@ -22,21 +22,21 @@ else
     exit 1
 fi
 
-if conda run -n cil-project black --check src --config black.toml ; then
+if conda run -n cil-project black --check cil_project --config black.toml ; then
     echo "No black errors"
 else
     echo "black errors"
     exit 1
 fi
 
-if conda run -n cil-project pylint src ; then
+if conda run -n cil-project pylint cil_project ; then
     echo "No pylint errors"
 else
     echo "pylint errors"
     exit 1
 fi
 
-if conda run -n cil-project mypy src ; then
+if conda run -n cil-project mypy cil_project ; then
     echo "No mypy errors"
 else
     echo "mypy errors"
