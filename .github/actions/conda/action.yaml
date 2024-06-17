@@ -51,5 +51,10 @@ runs:
           conda update -n base -c defaults conda
           conda update --all
           conda env create -f ./environment.yml
-          conda run -n cil-project pip install -r dev-requirements.txt
         shell: bash
+
+      - name: Install dev requirements
+        run: |
+          conda run -n cil-project pip install -e .
+          conda run -n cil-project pip install -r dev-requirements.txt
+        shell: bash -l {0}
