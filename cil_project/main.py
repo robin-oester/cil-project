@@ -1,7 +1,7 @@
 import pathlib
 
+from BayesianFactorizationMachines import bayesian_factorization_machines
 from dataset import BalancedKFold, RatingsDataset
-from BayesianFactorizationMachines import BFM
 
 if __name__ == "__main__":
 
@@ -17,5 +17,5 @@ if __name__ == "__main__":
         test_samples = len(test_idx)
         print(training_samples, test_samples)
 
-    # BFM example  
-    BFM.train(dataset.get_data_frame(), k_fold.split(dataset))
+    # BFM example
+    bayesian_factorization_machines.train(dataset.get_data_frame(), k_fold.split(dataset))

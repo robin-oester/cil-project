@@ -5,7 +5,7 @@ import re
 
 import numpy as np
 import pandas as pd
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset  # pylint: disable=E0401
 
 logger = logging.getLogger(__name__)
 
@@ -56,13 +56,13 @@ class RatingsDataset(Dataset):
                 raise ValueError(f"Duplicate rating at index '{idx}'.")
             ratings[user_id][movie_id] = rating
         return ratings
-    
-    def get_data_frame(self):
+
+    def get_data_frame(self) -> pd.DataFrame:
         """
         Returns the dataset as a pandas DataFrame.
         """
         data = self.data
-        df = pd.DataFrame(data, columns=['user_movie', 'rating'])
-        df[['user', 'movie']] = pd.DataFrame(df['user_movie'].tolist(), index=df.index)
-        df = df.drop(columns=['user_movie'])
+        df = pd.DataFrame(data, columns=["user_movie", "rating"])
+        df[["user", "movie"]] = pd.DataFrame(df["user_movie"].tolist(), index=df.index)
+        df = df.drop(columns=["user_movie"])
         return df
