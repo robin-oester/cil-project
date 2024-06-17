@@ -12,6 +12,7 @@ dependencies:
   - numpy
   - pandas
   - pip
+  - tqdm
   - scikit-learn
   - pytorch::pytorch
   - pytorch::torchvision
