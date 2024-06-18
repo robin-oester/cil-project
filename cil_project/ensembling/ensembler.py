@@ -15,50 +15,64 @@ class Ensembler:
         self.predictors.append(predictor)
 
     def generate_predictions(self, input_file_path: pathlib.Path, output_folder_path: pathlib.Path) -> None:
+        """
+        Generate predictions for the given input file and write them to the output folder.
+        """
         submission_dataset = SubmissionDataset(input_file_path)
-        predictions: dict[tuple[int, int], float] = {}
 
         # perform predictions for all predictors
         for predictor in self.predictors:
-            for (user_idx, movie_idx), _ in submission_dataset:
+            for idx, ((user_idx, movie_idx), _) in enumerate(submission_dataset.data):
                 prediction = predictor.predict((user_idx, movie_idx))
-                predictions[(user_idx, movie_idx)] = predictions.get((user_idx, movie_idx), 0) + prediction
+                submission_dataset.data[idx][1] += prediction
 
-        for (user_idx, movie_idx), prediction_sum in predictions.items():
+        for idx, (_, prediction_sum) in enumerate(submission_dataset.data):
             avg_prediction = prediction_sum / len(self.predictors)
-            predictions[(user_idx, movie_idx)] = avg_prediction
+            submission_dataset.data[idx][1] = avg_prediction
 
-        self.write_predictions_to_csv(predictions, output_folder_path)
+        self.write_predictions_to_csv(submission_dataset.data, output_folder_path)
 
     def generate_predictions_from_csv(self, output_folder_path: pathlib.Path) -> None:
-        predictions: dict[tuple[int, int], float] = {}
+        """
+        Average predictions from the csv files of the predictors and write them to the output folder.
+        """
+        predictions: list[list[tuple[int, int], float]] = []  # type: ignore
 
         # perform predictions for all predictors
-        for predictor in self.predictors:
+        for idx, predictor in enumerate(self.predictors):
             predictor_path = self.find_newest_predictor_file(output_folder_path, predictor.name)
-            predictor_dataset = SubmissionDataset(predictor_path)
-            for (user_idx, movie_idx), prediction in predictor_dataset:
-                predictions[(user_idx, movie_idx)] = predictions.get((user_idx, movie_idx), 0) + prediction
+            predictor_dataset = SubmissionDataset(predictor_path, set_values_to_zero=False)
+            if idx == 0:
+                predictions = predictor_dataset.data
+            else:
+                for idx, (_, prediction) in enumerate(predictor_dataset.data):
+                    predictions[idx][1] += prediction
 
-        for (user_idx, movie_idx), prediction_sum in predictions.items():
+        for idx, (_, prediction_sum) in enumerate(predictions):
             avg_prediction = prediction_sum / len(self.predictors)
-            predictions[(user_idx, movie_idx)] = avg_prediction
+            predictions[idx][1] = avg_prediction
 
         self.write_predictions_to_csv(predictions, output_folder_path)
 
     def write_predictions_to_csv(
-        self, predictions: dict[tuple[int, int], float], output_folder_path: pathlib.Path
+        self, predictions: list[list[tuple[int, int], float]], output_folder_path: pathlib.Path  # type: ignore
     ) -> None:
+        """
+        Write the predictions to a csv file in the given output folder.
+        """
         # create csv file with predictions
         millis = int(time.time())
         output_file_path = output_folder_path / f"Ensembler_{millis}.csv"
         with open(output_file_path, "w", encoding="utf-8") as output_file:
             writer = csv.writer(output_file)
             writer.writerow(["Id", "Prediction"])
-            for (user_idx, movie_idx), prediction in predictions.items():
+            for (user_idx, movie_idx), prediction in predictions:
                 writer.writerow([f"r{user_idx+1}_c{movie_idx+1}", prediction])
 
     def find_newest_predictor_file(self, output_folder_path: pathlib.Path, predictor_name: str) -> pathlib.Path:
+        """
+        Find the newest predictor file in the output folder with the given predictor name.
+        """
         # Pattern to match "predictorName_TIMESTAMP.csv"
         pattern = f"{predictor_name}_*.csv"
 
