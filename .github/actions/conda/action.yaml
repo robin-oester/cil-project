@@ -39,10 +39,15 @@ runs:
         run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
         shell: bash
 
+      # manually reset cache
+      - name: Set cache number
+        run: echo "CACHE_NUMBER=1" >> $GITHUB_ENV
+        shell: bash
+
       - uses: actions/cache@v3
         with:
           path: ${{ env.CONDAPATH }}
-          key: conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}
+          key: conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
         id: cache
 
       - name: Setup requirements
