@@ -39,10 +39,15 @@ runs:
         run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
         shell: bash
 
+      # manually reset cache
+      - name: Set cache number
+        run: echo "CACHE_NUMBER=1" >> $GITHUB_ENV
+        shell: bash
+
       - uses: actions/cache@v3
         with:
           path: ${{ env.CONDAPATH }}
-          key: conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}
+          key: conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
         id: cache
 
       - name: Setup requirements
@@ -51,5 +56,10 @@ runs:
           conda update -n base -c defaults conda
           conda update --all
           conda env create -f ./environment.yml
-          conda run -n cil-project pip install -r dev-requirements.txt
         shell: bash
+
+      - name: Install dev requirements
+        run: |
+          conda run -n cil-project pip install -e .
+          conda run -n cil-project pip install -r dev-requirements.txt
+        shell: bash -l {0}
