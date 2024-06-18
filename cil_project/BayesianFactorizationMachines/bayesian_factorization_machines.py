@@ -13,7 +13,7 @@ def train(
     dataset: pd.DataFrame,
     iterator: Iterator[Tuple[np.ndarray, np.ndarray]],
     rank: int = 4,
-    n_iter: int = 200,
+    n_iter: int = 300,
     n_kept_samples: int = 200,
 ) -> None:
     print("Training Bayesian Factorization Machine...")
