@@ -5,6 +5,7 @@ import re
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import OneHotEncoder
 from torch.utils.data import Dataset  # pylint: disable=E0401
 
 logger = logging.getLogger(__name__)
@@ -66,3 +67,12 @@ class RatingsDataset(Dataset):
         df[["user", "movie"]] = pd.DataFrame(df["user_movie"].tolist(), index=df.index)
         df = df.drop(columns=["user_movie"])
         return df
+
+    def get_one_hot_encoder(self) -> OneHotEncoder:
+        """
+        Returns the OneHotEncoder used to encode the user and movie IDs.
+        """
+        ohe = OneHotEncoder(handle_unknown="ignore")
+        df = self.get_data_frame()
+        ohe.fit(df[["user", "movie"]])  # pylint: disable=E1136
+        return ohe
