@@ -3,7 +3,7 @@ import pathlib
 from dataset import BalancedKFold, RatingsDataset
 
 if __name__ == "__main__":
-
+    print("Hello World!")
     # Example usage
     dataset = RatingsDataset(file_path=pathlib.Path("../data/data_train.csv"))
     print(dataset[0])
