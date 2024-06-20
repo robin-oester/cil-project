@@ -4,7 +4,7 @@ from .baseline import Baseline
 
 
 class ALS(Baseline):
-    def __init__(self, k: int = 3, max_iter: int = 20, lam: float = 0.1):
+    def __init__(self, k: int = 3, max_iter: int = 20, lam: float = 0.2):
         super().__init__()
         self.u: np.ndarray = np.array([])
         self.v: np.ndarray = np.array([])
@@ -60,7 +60,6 @@ class ALS(Baseline):
         data_matrix_norm[np.isnan(data_matrix_norm)] = 0
         self.als_matrix_completion(data_matrix_norm)
         self.denormalize_and_clip_reconstructed_matrix()
-        self.save_model_attributes()
 
     def predict(self, x: tuple[int, int]) -> float:
         if self.u.size == 0 or self.v.size == 0:
