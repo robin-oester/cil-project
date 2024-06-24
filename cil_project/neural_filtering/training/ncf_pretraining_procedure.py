@@ -1,10 +1,10 @@
 import argparse
 import logging
-import pathlib
 
-from cil_project.dataset import BalancedSplit, RatingsDataset, TargetNormalization
+from cil_project.dataset import BalancedSplit, RatingsDataset
 from cil_project.neural_filtering.models.ncf_baseline import NCFGMFModel, NCFMLPModel
-from cil_project.neural_filtering.training import PyTorchTrainer
+from cil_project.neural_filtering.trainers import RatingTrainer
+from cil_project.utils import FULL_SERIALIZED_DATASET_NAME, NUM_MOVIES, NUM_USERS
 from torch.optim import Adam
 
 logging.basicConfig(
@@ -14,9 +14,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+"""
+This script is used to pretrain the NCF components with the specified predictive factor and batch size.
+Typical usage:
+
+./ncf_pretraining_procedure.py --predictive_factor <predictive_factor> --batch_size <batch_size>
+                               --model_type <model_type> [--dataset <dataset>]
+"""
+
 # dataset constants
-NUM_USERS = 10_000
-NUM_MOVIES = 1_000
+LEARNING_RATE = 0.001
+NUM_EPOCHS = 100
 
 
 class NCFPretrainingProcedure:
@@ -41,31 +49,23 @@ class NCFPretrainingProcedure:
 
         # select the correct model
         if model_type == "gmf":
-            self.model = NCFGMFModel(hyperparameters)
+            model = NCFGMFModel(hyperparameters)
         else:
-            self.model = NCFMLPModel(hyperparameters)
-
-        # choose checkpoint directory
-        current_path = pathlib.Path(__file__).resolve().parent
-        checkpoint_path = current_path / "../checkpoints"
+            model = NCFMLPModel(hyperparameters)
 
         # initialize the trainer
-        optimizer = Adam(self.model.parameters(), lr=0.001)
-        self.trainer = PyTorchTrainer(self.model, checkpoint_path, batch_size, optimizer)
+        optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
+        self.trainer = RatingTrainer(model, batch_size, optimizer)
 
     def start_training(self, num_epochs: int) -> None:
-        splitter = BalancedSplit(0.9, True)
+        splitter = BalancedSplit(0.95, True)
 
         train_idx, test_idx = splitter.split(self.dataset)
 
         train_dataset = self.dataset.get_split(train_idx)
         test_dataset = self.dataset.get_split(test_idx)
 
-        # update test dataset statistics to reflect the training dataset
-        test_dataset.set_dataset_statistics(train_dataset)
-
-        train_dataset.normalize(TargetNormalization.TO_TANH_RANGE)
-        test_dataset.normalize(TargetNormalization.TO_TANH_RANGE)
+        # train_dataset.normalize(TargetNormalization.TO_TANH_RANGE)  # target normalization
 
         self.trainer.train(train_dataset, test_dataset, num_epochs)
 
@@ -99,21 +99,30 @@ def main() -> None:
         help="The model type, which must be either 'mlp' or 'gmf'.",
     )
 
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=RatingsDataset.get_available_dataset_names(),
+        required=False,
+        default=FULL_SERIALIZED_DATASET_NAME,
+        help="The name of the dataset.",
+    )
+
     args = parser.parse_args()
 
     predictive_factor: int = args.predictive_factor
     batch_size: int = args.batch_size
     model_type: str = args.model_type
+    dataset_name: str = args.dataset
 
     logger.info(
         f"Initialized the pretraining procedure for {model_type} with predictive factor {predictive_factor} "
-        f"and batch size {batch_size}."
+        f"and batch size {batch_size} on dataset '{dataset_name}'."
     )
 
-    current_path = pathlib.Path(__file__).resolve().parent
-    dataset = RatingsDataset.deserialize(current_path / "../../../data/serialized_ratings.npz")
+    dataset = RatingsDataset.load(dataset_name)
     training_procedure = NCFPretrainingProcedure(model_type, predictive_factor, batch_size, dataset)
-    training_procedure.start_training(30)
+    training_procedure.start_training(NUM_EPOCHS)
 
 
 if __name__ == "__main__":

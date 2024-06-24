@@ -1,7 +1,8 @@
 import os
 
+from cil_project.utils.model_initialization_error import ModelInitializationError  # noqa: F401
+
 from .abstract_model import AbstractModel  # noqa: F401
-from .model_initialization_error import ModelInitializationError  # noqa: F401
 from .ncf_baseline import NCFBaseline  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))

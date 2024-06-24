@@ -1,11 +1,11 @@
 import argparse
 import logging
-import pathlib
 
 import torch
-from cil_project.dataset import BalancedSplit, RatingsDataset, TargetNormalization
+from cil_project.dataset import BalancedSplit, RatingsDataset
 from cil_project.neural_filtering.models import NCFBaseline
-from cil_project.neural_filtering.training import PyTorchTrainer
+from cil_project.neural_filtering.trainers import RatingTrainer
+from cil_project.utils import CHECKPOINT_PATH, FULL_SERIALIZED_DATASET_NAME, NUM_MOVIES, NUM_USERS
 from torch.optim import SGD
 
 logging.basicConfig(
@@ -15,9 +15,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-NUM_USERS = 10_000
-NUM_MOVIES = 1_000
+"""
+This script is used to train the NCF model with the specified predictive factor and batch size.
+It also takes the pretrained model names (as found in checkpoints) for GMF and MLP.
+Typical usage:
+
+./ncf_training_procedure.py --predictive_factor <predictive_factor> --batch_size <batch_size>
+                            --gmf <gmf_name> --mlp <mlp_name> [--dataset <dataset>]
+"""
+
 ALPHA = 0.5
+LEARNING_RATE = 0.01
+NUM_EPOCHS = 100
 
 
 class NCFTrainingProcedure:
@@ -45,34 +54,29 @@ class NCFTrainingProcedure:
             "predictive_factor": predictive_factor,
             "alpha": ALPHA,
         }
-        self.model = NCFBaseline(hyperparameters)
-
-        current_path = pathlib.Path(__file__).resolve().parent
-        checkpoint_path = current_path / "../checkpoints"
+        model = NCFBaseline(hyperparameters)
 
         # set the pretrained weights
-        loaded_dict: dict = torch.load(checkpoint_path / gmf_name)["model"]
-        loaded_dict.update(torch.load(checkpoint_path / mlp_name)["model"])
-
-        self.model.load_state_dict(loaded_dict)
+        loaded_dict: dict = torch.load(CHECKPOINT_PATH / gmf_name)["model"]
+        loaded_dict.update(torch.load(CHECKPOINT_PATH / mlp_name)["model"])
+        model.load_state_dict(loaded_dict)
 
         # optimize using SGD
-        optimizer = SGD(self.model.parameters(), lr=0.01)
-        self.trainer = PyTorchTrainer(self.model, checkpoint_path, batch_size, optimizer)
+        optimizer = SGD(model.parameters(), lr=LEARNING_RATE)
 
-    def start_training(self) -> None:
-        splitter = BalancedSplit(0.9, True)
+        self.trainer = RatingTrainer(model, batch_size, optimizer)
+
+    def start_training(self, num_epochs: int) -> None:
+        splitter = BalancedSplit(0.95, True)
 
         train_idx, test_idx = splitter.split(self.dataset)
 
         train_dataset = self.dataset.get_split(train_idx)
         test_dataset = self.dataset.get_split(test_idx)
-        test_dataset.set_dataset_statistics(train_dataset)
 
-        train_dataset.normalize(TargetNormalization.TO_TANH_RANGE)
-        test_dataset.normalize(TargetNormalization.TO_TANH_RANGE)
+        # train_dataset.normalize(TargetNormalization.TO_TANH_RANGE)  # target normalization
 
-        self.trainer.train(train_dataset, test_dataset, 30)
+        self.trainer.train(train_dataset, test_dataset, num_epochs)
 
 
 def main() -> None:
@@ -100,22 +104,31 @@ def main() -> None:
 
     parser.add_argument("--mlp", type=str, required=True, help="Name of the pretrained model file of MLP.")
 
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        choices=RatingsDataset.get_available_dataset_names(),
+        required=False,
+        default=FULL_SERIALIZED_DATASET_NAME,
+        help="The name of the dataset.",
+    )
+
     args = parser.parse_args()
 
     predictive_factor: int = args.predictive_factor
     batch_size: int = args.batch_size
     gmf_name: str = args.gmf
     mlp_name: str = args.mlp
+    dataset_name: str = args.dataset
 
     logger.info(
         f"Initialized the training procedure for NCF with predictive factor {predictive_factor} "
-        f"and batch size {batch_size}."
+        f"and batch size {batch_size} on dataset '{dataset_name}'."
     )
 
-    current_path = pathlib.Path(__file__).resolve().parent
-    dataset = RatingsDataset.deserialize(current_path / "../../../data/serialized_ratings.npz")
+    dataset = RatingsDataset.load(dataset_name)
     training_procedure = NCFTrainingProcedure(predictive_factor, batch_size, dataset, gmf_name, mlp_name)
-    training_procedure.start_training()
+    training_procedure.start_training(NUM_EPOCHS)
 
 
 if __name__ == "__main__":

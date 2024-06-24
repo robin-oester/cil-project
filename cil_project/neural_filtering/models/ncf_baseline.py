@@ -1,9 +1,9 @@
 from typing import Any
 
 import torch
+from cil_project.utils import ModelInitializationError, validate_parameter_types
 
 from .abstract_model import AbstractModel
-from .model_initialization_error import ModelInitializationError
 
 
 class NCFBaseline(AbstractModel):
@@ -20,7 +20,7 @@ class NCFBaseline(AbstractModel):
         self.mlp = MLPLayer(self.num_users, self.num_movies, self.predictive_factor)
 
     def _initialize_parameters(self, hyperparameters: dict[str, Any]) -> None:
-        AbstractModel.validate_parameter_types(
+        validate_parameter_types(
             hyperparameters,
             [
                 ("num_users", int),
@@ -44,7 +44,10 @@ class NCFBaseline(AbstractModel):
         if self.alpha < 0 or self.alpha > 1:
             raise ModelInitializationError("alpha", "Parameter should be in range [0, 1]")
 
-    def predict(self, users: torch.Tensor, movies: torch.Tensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        users = inputs[:, 0]
+        movies = inputs[:, 1]
+
         # GMF
         x1 = self.gmf(users, movies)
 
@@ -52,8 +55,8 @@ class NCFBaseline(AbstractModel):
         x2 = self.mlp(users, movies)
 
         # NCF
-        logit = self.alpha * x1 + (1.0 - self.alpha) * x2
-        return torch.tanh(logit)
+        y = self.alpha * x1 + (1.0 - self.alpha) * x2
+        return y
 
 
 class NCFGMFModel(AbstractModel):
@@ -67,7 +70,7 @@ class NCFGMFModel(AbstractModel):
         self.gmf = GMFLayer(self.num_users, self.num_movies, self.predictive_factor)
 
     def _initialize_parameters(self, hyperparameters: dict[str, Any]) -> None:
-        AbstractModel.validate_parameter_types(
+        validate_parameter_types(
             hyperparameters,
             [
                 ("num_users", int),
@@ -87,9 +90,10 @@ class NCFGMFModel(AbstractModel):
         if self.num_movies <= 0:
             raise ModelInitializationError("num_movies", "Parameter should be positive")
 
-    def predict(self, users: torch.Tensor, movies: torch.Tensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        users = inputs[:, 0]
+        movies = inputs[:, 1]
         x = self.gmf(users, movies)
-        x = torch.tanh(x)
 
         return x
 
@@ -105,7 +109,7 @@ class NCFMLPModel(AbstractModel):
         self.mlp = MLPLayer(self.num_users, self.num_movies, self.predictive_factor)
 
     def _initialize_parameters(self, hyperparameters: dict[str, Any]) -> None:
-        AbstractModel.validate_parameter_types(
+        validate_parameter_types(
             hyperparameters,
             [
                 ("num_users", int),
@@ -125,9 +129,10 @@ class NCFMLPModel(AbstractModel):
         if self.num_movies <= 0:
             raise ModelInitializationError("num_movies", "Parameter should be positive")
 
-    def predict(self, users: torch.Tensor, movies: torch.Tensor) -> torch.Tensor:
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        users = inputs[:, 0]
+        movies = inputs[:, 1]
         x = self.mlp(users, movies)
-        x = torch.tanh(x)
 
         return x
 
