@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 import torch
+from cil_project.utils import CHECKPOINT_PATH
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,22 @@ class AbstractModel(ABC, torch.nn.Module):
         super().__init__()
         self.hyperparameters = hyperparameters
         self._initialize_parameters(hyperparameters)
+
+    @classmethod
+    def load_from_checkpoint(cls, checkpoint_name: str) -> "AbstractModel":
+        """
+        Load a model from a checkpoint generated from a trainer.
+
+        :param checkpoint_name: the file name of the checkpoint.
+        :return: the loaded model.
+        """
+
+        loaded_dict: dict = torch.load(CHECKPOINT_PATH / checkpoint_name)
+        hyperparameters = loaded_dict["hyperparameters"]
+        model = cls(hyperparameters)
+        model.load_state_dict(loaded_dict["model"])
+
+        return model
 
     @abstractmethod
     def _initialize_parameters(self, hyperparameters: dict[str, Any]) -> None:

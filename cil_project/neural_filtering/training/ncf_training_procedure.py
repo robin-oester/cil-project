@@ -76,7 +76,10 @@ class NCFTrainingProcedure:
 
         # train_dataset.normalize(TargetNormalization.TO_TANH_RANGE)  # target normalization
 
-        self.trainer.train(train_dataset, test_dataset, num_epochs)
+        try:
+            self.trainer.train(train_dataset, test_dataset, num_epochs)
+        except KeyboardInterrupt:
+            logger.info("Training interrupted by the user.")
 
 
 def main() -> None:

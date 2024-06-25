@@ -8,6 +8,7 @@ from .utils import MAX_RATING  # noqa: F401
 from .utils import MIN_RATING  # noqa: F401
 from .utils import NUM_MOVIES  # noqa: F401
 from .utils import NUM_USERS  # noqa: F401
+from .utils import SUBMISSION_FILE_NAME  # noqa: F401
 from .utils import masked_mse  # noqa: F401
 from .utils import masked_rmse  # noqa: F401
 from .utils import rmse  # noqa: F401

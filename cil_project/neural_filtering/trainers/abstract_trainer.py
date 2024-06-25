@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 class AbstractTrainer(ABC):
+    """
+    Abstract class used to train neural networks.
+    """
 
     def __init__(
         self,
@@ -40,7 +43,7 @@ class AbstractTrainer(ABC):
 
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.device = device if device else torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
 
         # check if optimizer in scheduler corresponds to the optimizer in the model
         if self.scheduler is not None:

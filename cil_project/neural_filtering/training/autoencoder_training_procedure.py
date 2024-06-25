@@ -23,7 +23,7 @@ Typical usage:
 """
 
 LEARNING_RATE = 0.005
-NUM_EPOCHS = 120
+NUM_EPOCHS = 300
 
 
 class AutoencoderTrainingProcedure:
@@ -42,7 +42,7 @@ class AutoencoderTrainingProcedure:
         optimizer = Adam(model.parameters())
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
 
-        self.trainer = ReconstructionTrainer(model, batch_size, optimizer, scheduler, verbose=False)
+        self.trainer = ReconstructionTrainer(model, batch_size, optimizer, scheduler)
 
     def start_training(self) -> None:
         splitter = BalancedSplit(0.95, True)
@@ -52,7 +52,10 @@ class AutoencoderTrainingProcedure:
         train_dataset = self.dataset.get_split(train_idx)
         test_dataset = self.dataset.get_split(test_idx)
 
-        self.trainer.train(train_dataset, test_dataset, NUM_EPOCHS)
+        try:
+            self.trainer.train(train_dataset, test_dataset, NUM_EPOCHS)
+        except KeyboardInterrupt:
+            logger.info("Training interrupted by the user.")
 
 
 def main() -> None:

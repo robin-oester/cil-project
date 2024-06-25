@@ -1,11 +1,10 @@
 import logging
 from typing import Optional
 
-import numpy as np
 import torch
 from cil_project.dataset import RatingsDataset
+from cil_project.neural_filtering.evaluators import AbstractEvaluator, RatingEvaluator
 from cil_project.neural_filtering.models import AbstractModel
-from cil_project.utils import MAX_RATING, MIN_RATING, rmse
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader
@@ -34,34 +33,14 @@ class RatingTrainer(AbstractTrainer):
     ) -> None:
         super().__init__(model, batch_size, optimizer, scheduler, device, verbose)
 
-    def _compute_validation_loss(self, dataset: RatingsDataset, val_loader: DataLoader, y_true: np.ndarray) -> float:
-        self.model.eval()
-
-        y_pred: np.ndarray = np.ndarray(y_true.shape)
-        with torch.no_grad():
-            start_idx = 0
-            for inputs, _ in val_loader:
-                inputs = inputs.to(self.device)
-
-                predictions = self.model(inputs).detach().cpu().numpy()
-                size = predictions.shape[0]
-
-                y_pred[start_idx : start_idx + size] = predictions
-                start_idx += size
-
-        return rmse(y_true, np.clip(dataset.denormalize_predictions(y_pred), MIN_RATING, MAX_RATING))
-
     # pylint: disable=too-many-locals
     def train(self, dataset: RatingsDataset, val_dataset: Optional[RatingsDataset], num_epochs: int) -> None:
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
         loss_func = torch.nn.MSELoss()
 
-        val_loader: Optional[DataLoader] = None
-        y_true: Optional[np.ndarray] = None
+        evaluator: Optional[AbstractEvaluator] = None
         if val_dataset is not None:
-            val_dataset.denormalize()
-            y_true = val_dataset.get_targets()
-            val_loader = DataLoader(val_dataset, batch_size=self.batch_size, shuffle=False)
+            evaluator = RatingEvaluator(self.model, self.batch_size, dataset, val_dataset, self.device)
 
         target_epoch = self.current_epoch + num_epochs
         model_class_name = self.model.__class__.__name__
@@ -94,11 +73,8 @@ class RatingTrainer(AbstractTrainer):
                 self.save_state()
 
             val_loss: Optional[float] = None
-            if val_loader is not None:
-                # Validation phase
-                assert y_true is not None
-
-                val_loss = self._compute_validation_loss(dataset, val_loader, y_true)
+            if evaluator is not None:
+                val_loss = evaluator.evaluate()
 
             self._log_epoch_information(target_epoch, avg_train_loss, val_loss)
 
@@ -107,4 +83,3 @@ class RatingTrainer(AbstractTrainer):
             self.current_epoch += 1
 
         logger.info(f"Finished training of model {model_class_name}.")
-        self.save_state()

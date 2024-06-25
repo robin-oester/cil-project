@@ -10,6 +10,7 @@ from .model_initialization_error import ModelInitializationError
 CHECKPOINT_PATH = pathlib.Path(__file__).resolve().parent / ".." / "neural_filtering" / "checkpoints"
 DATA_PATH = pathlib.Path(__file__).resolve().parent / ".." / ".." / "data"
 FULL_SERIALIZED_DATASET_NAME = "serialized_ratings"
+SUBMISSION_FILE_NAME = "sampleSubmission.csv"
 
 # dataset constants
 NUM_USERS = 10_000

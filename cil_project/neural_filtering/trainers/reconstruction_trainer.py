@@ -1,11 +1,11 @@
 import logging
 from typing import Optional
 
-import numpy as np
 import torch
 from cil_project.dataset import RatingsDataset
+from cil_project.neural_filtering.evaluators import AbstractEvaluator, ReconstructionEvaluator
 from cil_project.neural_filtering.models import AbstractModel
-from cil_project.utils import MAX_RATING, MIN_RATING, NUM_MOVIES, NUM_USERS, masked_mse, masked_rmse
+from cil_project.utils import masked_mse
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader, TensorDataset
@@ -31,40 +31,22 @@ class ReconstructionTrainer(AbstractTrainer):
     ) -> None:
         super().__init__(model, batch_size, optimizer, scheduler, device, verbose)
 
-    def _reconstruct_whole_matrix(self, train_data_tensor: torch.Tensor) -> np.ndarray:
-        """
-        Reconstructs the whole matrix from the model. Make sure that the model is in evaluation mode.
-
-        :param train_data_tensor: training dataset to evaluate the model.
-        :return: the reconstructed matrix.
-        """
-
-        data_reconstructed = np.zeros((NUM_USERS, NUM_MOVIES))
-
-        for i in range(0, NUM_USERS, self.batch_size):
-            upper_bound = min(i + self.batch_size, NUM_USERS)
-            data_reconstructed[i:upper_bound] = self.model(train_data_tensor[i:upper_bound]).detach().cpu().numpy()
-
-        return data_reconstructed
-
     # pylint: disable=too-many-locals
     def train(self, dataset: RatingsDataset, val_dataset: Optional[RatingsDataset], num_epochs: int) -> None:
-        # imputes training dataset with target mean
+        # TODO(#21): Implement other imputation methods than target mean.
         train_matrix = dataset.get_data_matrix(dataset.get_target_mean())
         train_mask = dataset.get_data_matrix_mask()
 
-        train_data_tensor = torch.tensor(train_matrix, device=self.device)
-        train_mask_tensor = torch.tensor(train_mask, device=self.device)
+        train_data_tensor = torch.from_numpy(train_matrix).to(self.device)
+        train_mask_tensor = torch.from_numpy(train_mask).to(self.device)
 
         dataloader = DataLoader(
             TensorDataset(train_data_tensor, train_mask_tensor), batch_size=self.batch_size, shuffle=True
         )
 
-        test_matrix = None
-        test_mask = None
+        evaluator: Optional[AbstractEvaluator] = None
         if val_dataset is not None:
-            test_matrix = val_dataset.get_data_matrix()
-            test_mask = np.where(test_matrix != 0, 1, 0)
+            evaluator = ReconstructionEvaluator(self.model, self.batch_size, dataset, val_dataset, self.device)
 
         target_epoch = self.current_epoch + num_epochs
         model_class_name = self.model.__class__.__name__
@@ -94,13 +76,8 @@ class ReconstructionTrainer(AbstractTrainer):
                 self.save_state()
 
             val_loss: Optional[float] = None
-            if val_dataset is not None:
-                self.model.eval()
-                with torch.no_grad():
-                    reconstructed_matrix = self._reconstruct_whole_matrix(train_data_tensor)
-
-                    reconstructed_matrix = np.clip(reconstructed_matrix, MIN_RATING, MAX_RATING)
-                    val_loss = masked_rmse(test_matrix, reconstructed_matrix, test_mask)
+            if evaluator is not None:
+                val_loss = evaluator.evaluate()
 
             self._log_epoch_information(target_epoch, avg_train_loss, val_loss)
 
@@ -109,4 +86,3 @@ class ReconstructionTrainer(AbstractTrainer):
             self.current_epoch += 1
 
         logger.info(f"Finished training of model {model_class_name}.")
-        self.save_state()

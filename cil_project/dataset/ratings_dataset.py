@@ -133,37 +133,40 @@ class RatingsDataset(Dataset):
                 self._targets[i] = self._targets[i] * std + mean
         self._normalization = None
 
-    def denormalize_predictions(self, predictions: np.ndarray) -> np.ndarray:
+    def denormalize_predictions(self, test_inputs: np.ndarray, outputs: np.ndarray) -> np.ndarray:
         """
         Denormalizes the predictions if they have been normalized.
 
-        :param predictions: the predictions to be denormalized.
-        :return: the denormalized predictions.
+        :param test_inputs: the inputs to test (shape: N x 2).
+        :param outputs: the normalized outputs (shape: N x 1).
+        :return: the denormalized outputs (shape: N x 1).
         """
+
+        assert test_inputs.shape[1] == 2
+        assert test_inputs.shape[0] == outputs.shape[0]
 
         if self.is_normalized():
             # this is Normalization.TO_TANH_RANGE
             mean = 3.0
             std = 2.0
 
-            for i, _ in enumerate(predictions):
+            for idx, (user_id, movie_id) in enumerate(test_inputs):
                 if self._normalization == TargetNormalization.BY_USER:
-                    user_id = self._inputs[i, 0]
                     mean = self._user_means[user_id]
                     std = self._user_stds[user_id]
                 elif self._normalization == TargetNormalization.BY_MOVIE:
-                    movie_id = self._inputs[i, 1]
                     mean = self._movie_means[movie_id]
                     std = self._movie_stds[movie_id]
                 elif self._normalization == TargetNormalization.BY_TARGET:
                     mean = self._target_mean
                     std = self._target_std
 
-                predictions[i] = predictions[i] * std + mean
-        return predictions
+                outputs[idx] = outputs[idx] * std + mean
+
+        return outputs
 
     @classmethod
-    def from_file(cls, file_path: pathlib.Path, num_users: int = 10000, num_movies: int = 1000) -> "RatingsDataset":
+    def from_file(cls, file_path: pathlib.Path, num_users: int = 10_000, num_movies: int = 1_000) -> "RatingsDataset":
         """
         Reads the data from a file. The file has a header and each line has the following format:
         r<user>_c<movie>,<rating>. The rating are floats/integers in [MIN_RATING, MAX_RATING].
