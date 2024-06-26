@@ -1,42 +1,40 @@
 import argparse
-import pathlib
+import logging
 
-from ensembling.dummy_model import DummyModel, DummyModel2
-from ensembling.ensembler import Ensembler
+from cil_project.ensembling import DummyModel, DummyModel2, Ensembler
+from cil_project.utils import DATA_PATH, SUBMISSION_FILE_NAME
 
-#  Example: python3 cil_project/run_ensembler.py --predictors DummyModel DummyModel2 --use_csv
-if __name__ == "__main__":
+logging.basicConfig(
+    level=logging.NOTSET,
+    format="[%(asctime)s]  [%(filename)15s:%(lineno)4d] %(levelname)-8s %(message)s",
+    datefmt="%Y-%m-%d:%H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
-    # Register predictors here
-    predictor_registry: dict[str, type] = {"DummyModel": DummyModel, "DummyModel2": DummyModel2}
+"""
+Ensembler class to combine predictions from different predictors.
+Typical usage:
 
-    #  Parse arguments
+./ensembler.py --predictors <predictor1> <predictor2> <predictor3> ...
+"""
+
+
+def run_ensembler() -> None:
     parser = argparse.ArgumentParser(description="Run ensembler with specified prediction predictors.")
     parser.add_argument("--predictors", nargs="+", help="List the predictors you want to use.")
-    parser.add_argument("--use_csv", action="store_true", help="Use the generate_predictions_from_csv method")
     args = parser.parse_args()
 
-    # Initialize ensembler
-    ensembler = Ensembler()
+    output_path = Ensembler.combine_predictions(args.predictors, SUBMISSION_FILE_NAME)
 
-    # Register predictors
-    for predictor in args.predictors:
-        if predictor in predictor_registry:
-            ensembler.register_predictor(predictor_registry[predictor]())
-        else:
-            raise ValueError(f"Predictor {predictor} not found in registry.")
+    logger.info(f"Successfully combined predictors to file '{output_path}'.")
 
-    # Generate predictions
-    input_file_path = pathlib.Path("./data/sampleSubmission.csv")
-    output_folder_path = pathlib.Path("./data/outputs")
 
-    if args.use_csv:  # In order to use the generate_predictions_from_csv method
-        # the predictors must have generated predictions before
-        # and the files must be in the output folder
-        ensembler.generate_predictions_from_csv(output_folder_path)
-    else:
-        ensembler.generate_predictions(input_file_path, output_folder_path)
+if __name__ == "__main__":
+    # Create sample predictions.
+    model1 = DummyModel()
+    model2 = DummyModel2()
 
-    # Example of how to generate predictions for a single predictor
-    predictor_registry["DummyModel"]().generate_predictions(input_file_path, output_folder_path)
-    predictor_registry["DummyModel2"]().generate_predictions(input_file_path, output_folder_path)
+    model1.generate_predictions(DATA_PATH / SUBMISSION_FILE_NAME)
+    model2.generate_predictions(DATA_PATH / SUBMISSION_FILE_NAME)
+
+    run_ensembler()

@@ -8,38 +8,53 @@ from .ratings_dataset import RatingsDataset
 
 class BalancedKFold:
     """
-    Allows balanced K-folding (each user is present approx. equally in each fold).
+    Allows balanced K-folding (each user is approx. equally present in each fold).
     """
 
     def __init__(self, num_folds: int, shuffle: bool):
-        self.num_folds = num_folds
-        self.shuffle = shuffle
+        """
+        Initializes the BalancedKFold class.
 
+        :param num_folds: the amount of folds.
+        :param shuffle: whether data should also be shuffled.
+        """
+
+        self._num_folds = num_folds
+        self._shuffle = shuffle
+
+    # pylint: disable=too-many-locals
     def split(self, dataset: RatingsDataset) -> Iterator[tuple[list[int], list[int]]]:
-        user_dict: dict[int, list[int]] = defaultdict(list)  # missing key returns empty list
+        """
+        Splits the dataset into the K folds.
+
+        :param dataset: dataset that needs to be split.
+        :return: the folds in iterative manner.
+        """
 
         # Organize indices by user id
-        for idx, ((user_id, _), _) in enumerate(dataset):
-            user_dict[user_id].append(idx)
+        user_dict: dict[int, list[int]] = defaultdict(list)  # missing key returns empty list
 
-        folds: list[list[int]] = [[] for _ in range(self.num_folds)]
+        for idx, (inputs, _) in enumerate(dataset):
+            user_dict[inputs[0].item()].append(idx)
 
-        for user_id, indices in user_dict.items():
-            if self.shuffle:
-                np.random.shuffle(indices)  # Shuffle indices for randomness
-            fold_size = len(indices) // self.num_folds
-            remainder = len(indices) % self.num_folds
+        folds: list[list[int]] = [[] for _ in range(self._num_folds)]
+
+        for indices in user_dict.values():
+            if self._shuffle:
+                np.random.shuffle(indices)  # shuffle indices for randomness
+            fold_size = len(indices) // self._num_folds
+            remainder = len(indices) % self._num_folds
 
             start_idx = 0
-            for i in range(self.num_folds):
+            for i in range(self._num_folds):
                 end_idx = start_idx + fold_size + (1 if i < remainder else 0)
                 folds[i].extend(indices[start_idx:end_idx])
                 start_idx = end_idx
 
-        for i in range(self.num_folds):
+        for i in range(self._num_folds):
             train_idx: list[int] = []
             test_idx: list[int] = []
-            for j in range(self.num_folds):
+            for j in range(self._num_folds):
                 if i == j:
                     test_idx.extend(folds[j])
                 else:

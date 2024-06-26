@@ -1,17 +1,15 @@
-import pathlib
-
-from dataset import BalancedKFold, RatingsDataset
+from cil_project.neural_filtering.evaluators import RatingEvaluator
+from cil_project.neural_filtering.models import NCFBaseline
+from cil_project.utils import FULL_SERIALIZED_DATASET_NAME, SUBMISSION_FILE_NAME
+from dataset import RatingsDataset
 
 if __name__ == "__main__":
     print("Hello World!")
+
     # Example usage
-    dataset = RatingsDataset(file_path=pathlib.Path("../data/data_train.csv"))
-    print(dataset[0])
+    model = NCFBaseline.load_from_checkpoint("NCFBaseline_5_2024-06-25_10:02:46.pkl")
+    dataset = RatingsDataset.load(FULL_SERIALIZED_DATASET_NAME)
 
-    k_fold = BalancedKFold(5, True)
-    iterator = k_fold.split(dataset)
+    evaluator = RatingEvaluator(model, 32, dataset, None)
 
-    for train_idx, test_idx in iterator:
-        training_samples = len(train_idx)
-        test_samples = len(test_idx)
-        print(training_samples + test_samples)
+    evaluator.generate_predictions(SUBMISSION_FILE_NAME)
