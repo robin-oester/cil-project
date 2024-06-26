@@ -1,7 +1,7 @@
-import pathlib
-
 import numpy as np
-from dataset.ratings_dataset import RatingsDataset
+from baseline_models import ALS
+from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
+from dataset import RatingsDataset
 
 # from baseline_models import ALS, SVP, SVT
 # from dataset.balanced_k_fold import BalancedKFold
@@ -32,13 +32,13 @@ def get_matrix(data: list[tuple[tuple[int, int], float]], num_users: int = 10000
 
 
 if __name__ == "__main__":
-    dataset = RatingsDataset(pathlib.Path("./data/data_train.csv"))
+    dataset = RatingsDataset.load(FULL_SERIALIZED_DATASET_NAME)
     data_matrix = dataset.get_data_matrix()
 
     # --- test ALS ---
-    # als = ALS()
-    # als.train(data_matrix)
-    # print("prediction: ", als.predict((1, 2)))
+    als = ALS()
+    als.train(data_matrix)
+    print("prediction: ", als.predict((1, 2)))
 
     # examlpe of how to load model attributes
     # als = ALS.load_model_attributes("./path/to/ALS.pkl")
