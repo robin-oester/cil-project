@@ -16,11 +16,11 @@ if __name__ == "__main__":
     bfm = BFM.BayesianFactorizationMachine(dataset, iterator)
 
     # Train the model
-    # bfm.train()
+    bfm.train(rank=2, n_iter=10, n_kept_samples=10, grouped=True, implicit=True, ordered_probit=True, save_model=False)
 
     # Predict a rating
-    try:
-        prediction = bfm.predict((1, 1))
-        print(f"Predicted rating for user 1 and movie 1: {prediction}")
-    except ValueError as e:
-        print(e)
+    # try:
+    #     prediction = bfm.predict((1, 1))
+    #     print(f"Predicted rating for user 1 and movie 1: {prediction}")
+    # except ValueError as e:
+    #     print(e)
