@@ -5,9 +5,9 @@ import re
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 import torch
 from cil_project.utils import DATA_PATH, MAX_RATING, MIN_RATING
-import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 from torch.utils.data import Dataset  # pylint: disable=E0401
 
@@ -336,10 +336,8 @@ class RatingsDataset(Dataset):
         """
         Returns the dataset as a pandas DataFrame.
         """
-        data = self.data
-        df = pd.DataFrame(data, columns=["user_movie", "rating"])
-        df[["user", "movie"]] = pd.DataFrame(df["user_movie"].tolist(), index=df.index)
-        df = df.drop(columns=["user_movie"])
+        data = np.concatenate((self._inputs, self._targets), axis=1)
+        df = pd.DataFrame(data, columns=["user", "movie", "rating"])
         return df
 
     def get_one_hot_encoder(self) -> OneHotEncoder:
