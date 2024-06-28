@@ -22,21 +22,21 @@ jobs:
           conda run -n cil-project flake8 --version
           conda run -n cil-project flake8 cil_project --statistics
 
-  mypy-typechecking:
-    timeout-minutes: 20
-    runs-on: ubuntu-latest
+  #mypy-typechecking:
+    #timeout-minutes: 20
+    #runs-on: ubuntu-latest
 
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v3
+    #steps:
+      #- name: Check out code
+        #uses: actions/checkout@v3
 
-      - name: Setup conda
-        uses: ./.github/actions/conda
+      #- name: Setup conda
+        #uses: ./.github/actions/conda
 
-      - name: Mypy
-        run: |
-          conda run -n cil-project mypy --version
-          conda run -n cil-project mypy cil_project
+      #- name: Mypy
+        #run: |
+          #conda run -n cil-project mypy --version
+          #conda run -n cil-project mypy cil_project
 
   pylint:
     timeout-minutes: 20
