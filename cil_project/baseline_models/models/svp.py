@@ -1,13 +1,15 @@
 import numpy as np
+from cil_project.ensembling import RatingPredictor
 
 from .baseline import Baseline
 
 
-class SVP(Baseline):
-    def __init__(self, k: int = 5, max_iter: int = 20, eta: float = 0.8):
+class SVP(Baseline, RatingPredictor):
+    def __init__(self, k: int = 5, max_iter: int = 60, eta: float = 0.8, verbose: bool = False):
         super().__init__()  # Initialize the Baseline class
         self.u: np.ndarray = np.array([])
         self.v: np.ndarray = np.array([])
+        self.verbose = verbose
         # Define hyperparameters dictionary
         self.hyperparameters = {"k": k, "max_iter": max_iter, "eta": eta}
 
@@ -25,7 +27,8 @@ class SVP(Baseline):
         self.reconstructed_matrix = np.zeros((num_users, num_movies))
 
         for it in range(max_iter):
-            print(f"Iteration {it+1}")
+            if self.verbose:
+                print(f"Iteration {it+1}")
             self.reconstructed_matrix = self.reconstructed_matrix + eta * d_matrix_mask * (
                 d_matrix - self.reconstructed_matrix
             )
@@ -35,7 +38,8 @@ class SVP(Baseline):
             u_k = u[:, :k]
             vt_k = vt[:k, :]
             self.reconstructed_matrix = u_k @ s_k @ vt_k
-            print("Training RMSE:", self.training_rmse(d_matrix, d_matrix_mask))
+            if self.verbose:
+                print("Training RMSE:", self.training_rmse(d_matrix, d_matrix_mask))
 
     def train(self, data_matrix: np.ndarray) -> None:
         if not np.isnan(data_matrix).any():  # If the matrix has already been zero-imputed
@@ -46,8 +50,13 @@ class SVP(Baseline):
         self.svp_matrix_completion(data_matrix_norm)
         self.denormalize_and_clip_reconstructed_matrix()
 
-    def predict(self, x: tuple[int, int]) -> float:
+    def predict(self, inputs: np.ndarray) -> np.ndarray:
         if self.reconstructed_matrix.size == 0:
             raise ValueError("Model not trained. Please train the model first.")
-        user_id, movie_id = x
-        return float(self.reconstructed_matrix[user_id, movie_id])
+        users = inputs[:, 0]
+        movies = inputs[:, 1]
+        estimated_ratings = self.reconstructed_matrix[users, movies]
+        return estimated_ratings.reshape(-1, 1)
+
+    def get_name(self) -> str:
+        return self.__class__.__name__
