@@ -32,9 +32,7 @@ class Baseline:
         """
         self.reconstructed_matrix = self.reconstructed_matrix * self.column_std + self.column_mean
         self.reconstructed_matrix = np.clip(self.reconstructed_matrix, 1, 5)
-
-    def training_rmse(self, d: np.ndarray, d_mask: np.ndarray) -> float:
-        return np.sqrt(np.sum((d_mask * (d - self.reconstructed_matrix)) ** 2) / float(np.sum(d_mask)))
+        
 
     def save_model_attributes(self) -> None:
         folder_path = pathlib.Path(pathlib.Path(__file__).parent) / "predictor_attributes"

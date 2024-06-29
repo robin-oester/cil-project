@@ -1,9 +1,9 @@
 from cil_project.baseline_models.models.svt import SVT
 from cil_project.dataset import BalancedKFold, RatingsDataset
-from cil_project.utils import FULL_SERIALIZED_DATASET_NAME, SUBMISSION_FILE_NAME, masked_rmse
+from cil_project.utils import FULL_SERIALIZED_DATASET_NAME, SUBMISSION_FILE_NAME
 
-ONLY_GENERATE_SUBMISSION = True
-VERBOSE = False
+ONLY_GENERATE_SUBMISSION = False
+VERBOSE = True
 
 # hyperparameters
 MAX_ITER = 60
@@ -34,12 +34,7 @@ if __name__ == "__main__":
         test_matrix_mask = test_data.get_data_matrix_mask().astype(int)
 
         # train model
-        svt.train(train_matrix)
-        reconstr = svt.reconstructed_matrix
-
-        # validate model
-        rmse = masked_rmse(test_matrix, reconstr, test_matrix_mask)
-        print(f"Fold {fold+1} validation RMSE: {rmse}")
+        svt.train(train_matrix, test_matrix, test_matrix_mask)
 
     # train on the whole dataset and generate submission file
     print("Training on the whole dataset")

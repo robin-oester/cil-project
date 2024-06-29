@@ -1,5 +1,6 @@
 import numpy as np
 from cil_project.ensembling import RatingPredictor
+from cil_project.utils import masked_rmse
 
 from .baseline import Baseline
 
@@ -10,6 +11,8 @@ class SVP(Baseline, RatingPredictor):
         self.u: np.ndarray = np.array([])
         self.v: np.ndarray = np.array([])
         self.verbose = verbose
+        self.test_m = np.array([])
+        self.test_m_mask = np.array([])
         # Define hyperparameters dictionary
         self.hyperparameters = {"k": k, "max_iter": max_iter, "eta": eta}
 
@@ -27,8 +30,6 @@ class SVP(Baseline, RatingPredictor):
         self.reconstructed_matrix = np.zeros((num_users, num_movies))
 
         for it in range(max_iter):
-            if self.verbose:
-                print(f"Iteration {it+1}")
             self.reconstructed_matrix = self.reconstructed_matrix + eta * d_matrix_mask * (
                 d_matrix - self.reconstructed_matrix
             )
@@ -38,10 +39,13 @@ class SVP(Baseline, RatingPredictor):
             u_k = u[:, :k]
             vt_k = vt[:k, :]
             self.reconstructed_matrix = u_k @ s_k @ vt_k
-            if self.verbose:
-                print("Training RMSE:", self.training_rmse(d_matrix, d_matrix_mask))
+            if self.verbose and not(self.test_m.size == 0 and self.test_m_mask.size == 0):
+                r = np.clip(self.reconstructed_matrix.copy() * self.column_std + self.column_mean, 1, 5)
+                print(f"Iteration {it+1}, Validation RMSE: {masked_rmse(self.test_m, r, self.test_m_mask)}")
 
-    def train(self, data_matrix: np.ndarray) -> None:
+    def train(self, data_matrix: np.ndarray, test_m: np.ndarray = np.array([]), test_m_mask: np.ndarray = np.array([])) -> None:
+        self.test_m = test_m
+        self.test_m_mask = test_m_mask
         if not np.isnan(data_matrix).any():  # If the matrix has already been zero-imputed
             data_matrix[data_matrix == 0] = np.nan
         data_matrix_norm = self.normalize_data_matrix(data_matrix)

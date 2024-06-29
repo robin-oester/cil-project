@@ -1,6 +1,6 @@
 import numpy as np
 from cil_project.ensembling import RatingPredictor
-
+from cil_project.utils import masked_rmse
 from .baseline import Baseline
 
 
@@ -10,6 +10,8 @@ class SVT(Baseline, RatingPredictor):
         self.u: np.ndarray = np.array([])
         self.v: np.ndarray = np.array([])
         self.verbose = verbose
+        self.test_m = np.array([])
+        self.test_m_mask = np.array([])
         # Define hyperparameters dictionary
         self.hyperparameters = {"max_iter": max_iter, "eta": eta, "tau": tau}
 
@@ -27,8 +29,6 @@ class SVT(Baseline, RatingPredictor):
         self.reconstructed_matrix = np.zeros((num_users, num_movies))
 
         for it in range(max_iter):
-            if self.verbose:
-                print(f"Iteration {it+1}")
             self.reconstructed_matrix[mask] = self.reconstructed_matrix[mask] + eta * (
                 d_matrix[mask] - self.reconstructed_matrix[mask]
             )
@@ -39,10 +39,13 @@ class SVT(Baseline, RatingPredictor):
             self.reconstructed_matrix = (u[:, :nr_selected_sigmas] * s[:nr_selected_sigmas]) @ vt[
                 :nr_selected_sigmas, :
             ]
-            if self.verbose:
-                print("Training RMSE:", self.training_rmse(d_matrix, mask))
+            if self.verbose and not(self.test_m.size == 0 and self.test_m_mask.size == 0):
+                r = np.clip(self.reconstructed_matrix.copy() * self.column_std + self.column_mean, 1, 5)
+                print(f"Iteration {it+1}, Validation RMSE: {masked_rmse(self.test_m, r, self.test_m_mask)}")
 
-    def train(self, data_matrix: np.ndarray) -> None:
+    def train(self, data_matrix: np.ndarray, test_m: np.ndarray = np.array([]), test_m_mask: np.ndarray = np.array([])) -> None:
+        self.test_m = test_m
+        self.test_m_mask = test_m_mask
         if not np.isnan(data_matrix).any():  # If the matrix has already been zero-imputed
             data_matrix[data_matrix == 0] = np.nan
         data_matrix_norm = self.normalize_data_matrix(data_matrix)
