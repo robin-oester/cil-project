@@ -39,11 +39,13 @@ class SVP(Baseline, RatingPredictor):
             u_k = u[:, :k]
             vt_k = vt[:k, :]
             self.reconstructed_matrix = u_k @ s_k @ vt_k
-            if self.verbose and not(self.test_m.size == 0 and self.test_m_mask.size == 0):
+            if self.verbose and not (self.test_m.size == 0 and self.test_m_mask.size == 0):
                 r = np.clip(self.reconstructed_matrix.copy() * self.column_std + self.column_mean, 1, 5)
                 print(f"Iteration {it+1}, Validation RMSE: {masked_rmse(self.test_m, r, self.test_m_mask)}")
 
-    def train(self, data_matrix: np.ndarray, test_m: np.ndarray = np.array([]), test_m_mask: np.ndarray = np.array([])) -> None:
+    def train(
+        self, data_matrix: np.ndarray, test_m: np.ndarray = np.array([]), test_m_mask: np.ndarray = np.array([])
+    ) -> None:
         self.test_m = test_m
         self.test_m_mask = test_m_mask
         if not np.isnan(data_matrix).any():  # If the matrix has already been zero-imputed
