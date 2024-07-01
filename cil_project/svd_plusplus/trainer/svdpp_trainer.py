@@ -14,7 +14,7 @@ from .abstract_trainer import AbstractTrainer
 
 logger = logging.getLogger(__name__)
 
-CHECKPOINT_GRANULARITY = 7
+CHECKPOINT_GRANULARITY = 5
 
 
 class SVDPPTrainer(AbstractTrainer):
@@ -32,6 +32,7 @@ class SVDPPTrainer(AbstractTrainer):
         verbose: bool = True,
     ) -> None:
         super().__init__(model, batch_size, optimizer, scheduler, device, verbose)
+        self.validation_loss: Optional[float] = 0.0
 
     # pylint: disable=too-many-locals
     def train(self, dataset: RatingsDataset, val_dataset: Optional[RatingsDataset], num_epochs: int) -> None:
@@ -88,6 +89,7 @@ class SVDPPTrainer(AbstractTrainer):
             val_loss: Optional[float] = None
             if evaluator is not None:
                 val_loss = evaluator.evaluate()
+                self.validation_loss = val_loss
 
             self._log_epoch_information(target_epoch, avg_train_loss, val_loss)
 

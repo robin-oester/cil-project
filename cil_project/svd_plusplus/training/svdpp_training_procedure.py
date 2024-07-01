@@ -1,6 +1,6 @@
 import logging
 
-from cil_project.dataset import BalancedSplit, RatingsDataset
+from cil_project.dataset import BalancedKFold, BalancedSplit, RatingsDataset
 from cil_project.svd_plusplus.model import SVDPP
 from cil_project.svd_plusplus.trainer import SVDPPTrainer
 from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
@@ -19,8 +19,9 @@ This script is used to train svdpp.
 Typical usage: python3 cil_project/../svdpp_training_procedure.py
 """
 
-LEARNING_RATE = 0.06
-NUM_EPOCHS = 7
+LEARNING_RATE = 0.0015
+DECAY = 0.7
+NUM_EPOCHS = 5
 
 
 class SVDPPTrainingProcedure:
@@ -31,16 +32,17 @@ class SVDPPTrainingProcedure:
     def __init__(self, hyperparameters: dict, batch_size: int, dataset: RatingsDataset) -> None:
         self.dataset = dataset
         self.batch_size = batch_size
+        self.hyperparameters = hyperparameters
 
         model = SVDPP(hyperparameters)
         # initialize the trainer
-        optimizer = Adam(model.parameters())
-        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.6)
+        optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
+        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=DECAY)
 
         self.trainer = SVDPPTrainer(model, self.batch_size, optimizer, scheduler)
 
     def start_training(self) -> None:
-        splitter = BalancedSplit(0.95, True)
+        splitter = BalancedSplit(0.75, True)
 
         train_idx, test_idx = splitter.split(self.dataset)
 
@@ -52,11 +54,38 @@ class SVDPPTrainingProcedure:
         except KeyboardInterrupt:
             logger.info("Training interrupted by the user.")
 
+    def start_kfold_training(self, num_folds: int = 10) -> None:
+        avg_rmse = 0.0
+        kfold = BalancedKFold(num_folds=num_folds, shuffle=True)
+
+        for fold, (train_idx, test_idx) in enumerate(kfold.split(self.dataset)):
+            logger.info(f"Fold {fold+1} started")
+
+            # initialize the trainer
+            model = SVDPP(self.hyperparameters)
+            optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
+            scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=DECAY)
+            self.trainer = SVDPPTrainer(model, self.batch_size, optimizer, scheduler)
+
+            # training split
+            train_dataset = self.dataset.get_split(train_idx)
+            test_dataset = self.dataset.get_split(test_idx)
+
+            try:
+                self.trainer.train(train_dataset, test_dataset, NUM_EPOCHS)
+                avg_rmse += self.trainer.validation_loss
+
+            except KeyboardInterrupt:
+                logger.info("Training interrupted by the user.")
+
+        avg_rmse /= num_folds
+        logger.info(f"Average RMSE over {num_folds} folds: {avg_rmse}")
+
 
 def main() -> None:
 
     # hyperparameters
-    hyperparameters = {"nr_factors": 190, "lam": 0.001, "lam1": 10.0, "lam2": 25.0, "lam3": 10.0}
+    hyperparameters = {"nr_factors": 180, "lam": 0.03, "lam1": 10.0, "lam2": 25.0, "lam3": 10.0}
 
     batch_size = 4096  # works fine
     dataset_name = FULL_SERIALIZED_DATASET_NAME
@@ -68,7 +97,8 @@ def main() -> None:
 
     dataset = RatingsDataset.load(dataset_name)
     training_procedure = SVDPPTrainingProcedure(hyperparameters, batch_size, dataset)
-    training_procedure.start_training()
+    # training_procedure.start_training()
+    training_procedure.start_kfold_training()
 
 
 if __name__ == "__main__":
