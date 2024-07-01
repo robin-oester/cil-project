@@ -83,7 +83,7 @@ class SVDPP(AbstractModel):
             bu[u] = (ratings_of_u - mu - bi[indices]).sum() / (self.lam2 + len(ratings_of_u))
 
         # Compute the y matrix
-        # Idea to use SVD from: https://gitlab.ethz.ch/yuhmao/cil-groupwork
+        # Adapted from: https://github.com/opedal/cilsg
         y = np.zeros((NUM_USERS, self.nr_factors))
         _, s, vt = np.linalg.svd(data_matrix, full_matrices=False)
         d = np.diag(np.sqrt(s))

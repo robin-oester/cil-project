@@ -19,8 +19,8 @@ This script is used to train svdpp.
 Typical usage: python3 cil_project/../svdpp_training_procedure.py
 """
 
-LEARNING_RATE = 0.05
-NUM_EPOCHS = 5
+LEARNING_RATE = 0.06
+NUM_EPOCHS = 7
 
 
 class SVDPPTrainingProcedure:

@@ -14,7 +14,7 @@ from .abstract_trainer import AbstractTrainer
 
 logger = logging.getLogger(__name__)
 
-CHECKPOINT_GRANULARITY = 5
+CHECKPOINT_GRANULARITY = 7
 
 
 class SVDPPTrainer(AbstractTrainer):
