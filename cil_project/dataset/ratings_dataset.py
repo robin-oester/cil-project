@@ -93,12 +93,12 @@ class RatingsDataset(Dataset):
 
         mean, std = self._get_normalization_statistics(normalization)
 
-        assert mean.shape == self._targets.shape, (
-            f"Shapes of target and mean do not match ({self._targets.shape} vs " f"{mean.shape}"
-        )
-        assert std.shape == self._targets.shape, (
-            f"Shapes of target and std do not match ({self._targets.shape} vs " f"{std.shape}"
-        )
+        assert (
+            mean.shape == self._targets.shape
+        ), f"Shapes of target and mean do not match ({self._targets.shape} vs {mean.shape}"
+        assert (
+            std.shape == self._targets.shape
+        ), f"Shapes of target and std do not match ({self._targets.shape} vs {std.shape}"
 
         self._targets = np.divide(self._targets - mean, std)
         self._normalization = normalization

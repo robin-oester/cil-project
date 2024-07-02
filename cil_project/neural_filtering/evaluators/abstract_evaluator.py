@@ -60,12 +60,10 @@ class AbstractEvaluator(RatingPredictor):
 
         assert (
             self.val_mean.shape == predictions.shape
-        ), (f"Shapes of predictions and mean do not match ({predictions.shape} vs "
-            f"{self.val_mean.shape}")
+        ), f"Shapes of predictions and mean do not match ({predictions.shape} vs {self.val_mean.shape}"
         assert (
             self.val_std.shape == predictions.shape
-        ), (f"Shapes of predictions and std do not match ({predictions.shape} vs "
-            f"{self.val_std.shape}")
+        ), f"Shapes of predictions and std do not match ({predictions.shape} vs {self.val_std.shape}"
 
         denormalized_predictions = np.multiply(predictions, self.val_std) + self.val_mean
 
@@ -88,12 +86,10 @@ class AbstractEvaluator(RatingPredictor):
 
         assert (
             mean.shape == predictions.shape
-        ), (f"Shapes of predictions and mean do not match ({predictions.shape} vs "
-            f"{mean.shape}")
+        ), f"Shapes of predictions and mean do not match ({predictions.shape} vs {mean.shape}"
         assert (
             std.shape == predictions.shape
-        ), (f"Shapes of predictions and std do not match ({predictions.shape} vs "
-            f"{std.shape}")
+        ), f"Shapes of predictions and std do not match ({predictions.shape} vs {std.shape}"
 
         denormalized_predictions = np.multiply(predictions, std) + mean
 

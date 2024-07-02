@@ -84,6 +84,5 @@ class RatingTrainer(AbstractTrainer):
             self.current_epoch += 1
 
         logger.info(
-            f"Finished training of model "
-            f"{model_class_name} with best validation loss {self.best_val_loss:.4f}."
+            f"Finished training of model {model_class_name} with best validation loss {self.best_val_loss:.4f}."
         )
