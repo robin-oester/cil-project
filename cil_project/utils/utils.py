@@ -1,5 +1,6 @@
 import pathlib
-from typing import Any
+import warnings
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -69,3 +70,33 @@ def validate_parameter_types(hyperparameters: dict[str, Any], types: list[tuple[
             raise ModelInitializationError(param_name, "Parameter not found")
         if not isinstance(hyperparameters[param_name], param_type):
             raise ModelInitializationError(param_name, "Parameter doesn't match with expected type")
+
+
+def nanmean(arr: np.ndarray, axis: Optional[int] = None) -> np.ndarray:
+    """
+    Computes an aware version of `np.nanmean()` replacing `np.nan` with the global mean.
+
+    :param arr: the array, on which the mean is computed.
+    :param axis: the axis, along which is averaged.
+    :return:
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        nanmeans = np.nanmean(arr, axis=axis)
+        globalmean = np.nanmean(nanmeans)
+    return np.where(np.isnan(nanmeans), globalmean, nanmeans)
+
+
+def nanstd(arr: np.ndarray, axis: Optional[int] = None) -> np.ndarray:
+    """
+    Computes an aware version of `np.nanstd()` replacing `np.nan` with the global standard deviation.
+
+    :param arr: the array, on which the std is computed.
+    :param axis: the axis, along which is computed.
+    :return:
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=RuntimeWarning)
+        nanstds = np.nanstd(arr, axis=axis)
+        globalmean = np.nanmean(nanstds)
+    return np.where(np.isnan(nanstds), globalmean, nanstds)

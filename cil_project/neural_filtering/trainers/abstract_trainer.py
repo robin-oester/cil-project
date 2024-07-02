@@ -69,7 +69,7 @@ class AbstractTrainer(ABC):
             "best_val_loss": self.best_val_loss,
         }
 
-        current_timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+        current_timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
 
         model_class_name = self.model.__class__.__name__
         epoch = self.current_epoch + 1
