@@ -42,15 +42,15 @@ class SVDPPTrainingProcedure:
         self.trainer = SVDPPTrainer(model, self.batch_size, optimizer, scheduler)
 
     def start_training(self) -> None:
-        splitter = BalancedSplit(0.75, True)
+        #splitter = BalancedSplit(0.75, True)
 
-        train_idx, test_idx = splitter.split(self.dataset)
+        #train_idx, test_idx = splitter.split(self.dataset)
 
-        train_dataset = self.dataset.get_split(train_idx)
-        test_dataset = self.dataset.get_split(test_idx)
+        #train_dataset = self.dataset.get_split(train_idx)
+        #test_dataset = self.dataset.get_split(test_idx)
 
         try:
-            self.trainer.train(train_dataset, test_dataset, NUM_EPOCHS)
+            self.trainer.train(self.dataset, None, NUM_EPOCHS)
         except KeyboardInterrupt:
             logger.info("Training interrupted by the user.")
 
@@ -97,8 +97,8 @@ def main() -> None:
 
     dataset = RatingsDataset.load(dataset_name)
     training_procedure = SVDPPTrainingProcedure(hyperparameters, batch_size, dataset)
-    # training_procedure.start_training()
-    training_procedure.start_kfold_training()
+    training_procedure.start_training()
+    # training_procedure.start_kfold_training()
 
 
 if __name__ == "__main__":

@@ -64,6 +64,12 @@ class AbstractTrainer(ABC):
 
         dict_to_save = {
             "model": self.model.state_dict(),
+            "heuristics": {
+                "mu": self.model.mu,
+                "bu": self.model.bu,
+                "bi": self.model.bi,
+                "y": self.model.y,
+            },
             "optimizer": self.optimizer.state_dict(),
             "hyperparameters": self.model.hyperparameters,
             "epoch": self.current_epoch + 1,
@@ -90,6 +96,10 @@ class AbstractTrainer(ABC):
 
         loaded_dict = torch.load(checkpoint_path)
         self.model.load_state_dict(loaded_dict["model"])
+        self.model.mu = loaded_dict["heuristics"]["mu"]
+        self.model.bu = loaded_dict["heuristics"]["bu"]
+        self.model.bi = loaded_dict["heuristics"]["bi"]
+        self.model.y = loaded_dict["heuristics"]["y"]
         self.optimizer.load_state_dict(loaded_dict["optimizer"])
         self.current_epoch = loaded_dict["epoch"]
         self.best_val_loss = loaded_dict["best_val_loss"]

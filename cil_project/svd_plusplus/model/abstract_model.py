@@ -39,6 +39,10 @@ class AbstractModel(ABC, torch.nn.Module):
         hyperparameters = loaded_dict["hyperparameters"]
         model = cls(hyperparameters)
         model.load_state_dict(loaded_dict["model"])
+        model.mu = loaded_dict["heuristics"]["mu"]
+        model.bu =  loaded_dict["heuristics"]["bu"]
+        model.bi = loaded_dict["heuristics"]["bi"]
+        model.y = loaded_dict["heuristics"]["y"]
 
         return model
 
