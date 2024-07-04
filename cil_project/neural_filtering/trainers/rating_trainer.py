@@ -69,8 +69,6 @@ class RatingTrainer(AbstractTrainer):
                     epoch_loss += loss.item()
 
             avg_train_loss = epoch_loss / len(dataloader)
-            if (self.current_epoch + 1) % CHECKPOINT_GRANULARITY == 0:
-                self.save_state()
 
             val_loss: Optional[float] = None
             if evaluator is not None:
@@ -78,8 +76,13 @@ class RatingTrainer(AbstractTrainer):
 
             self._log_epoch_information(target_epoch, avg_train_loss, val_loss)
 
+            if (self.current_epoch + 1) % CHECKPOINT_GRANULARITY == 0:
+                self.save_state()
+
             if self.scheduler is not None:
                 self.scheduler.step()
             self.current_epoch += 1
 
-        logger.info(f"Finished training of model {model_class_name}.")
+        logger.info(
+            f"Finished training of model {model_class_name} with best validation loss {self.best_val_loss:.4f}."
+        )

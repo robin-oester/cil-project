@@ -10,6 +10,9 @@ if __name__ == "__main__":
     model = NCFBaseline.load_from_checkpoint("NCFBaseline_5_2024-06-25_10:02:46.pkl")
     dataset = RatingsDataset.load(FULL_SERIALIZED_DATASET_NAME)
 
-    evaluator = RatingEvaluator(model, 32, dataset, None)
+    # optional normalization
+    # dataset.normalize(TargetNormalization.BY_MOVIE)
+
+    evaluator = RatingEvaluator(model, 64, dataset, None)
 
     evaluator.generate_predictions(SUBMISSION_FILE_NAME)
