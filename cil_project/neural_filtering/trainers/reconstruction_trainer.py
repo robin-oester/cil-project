@@ -15,7 +15,7 @@ from .abstract_trainer import AbstractTrainer
 
 logger = logging.getLogger(__name__)
 
-CHECKPOINT_GRANULARITY = 20
+CHECKPOINT_GRANULARITY = 50
 
 
 class ReconstructionTrainer(AbstractTrainer):
@@ -34,7 +34,7 @@ class ReconstructionTrainer(AbstractTrainer):
     # pylint: disable=too-many-locals
     def train(self, dataset: RatingsDataset, val_dataset: Optional[RatingsDataset], num_epochs: int) -> None:
         # TODO(#21): Implement other imputation methods than target mean.
-        train_matrix = dataset.get_data_matrix(dataset.get_target_mean())
+        train_matrix = dataset.get_data_matrix(0)
         train_mask = dataset.get_data_matrix_mask()
 
         train_data_tensor = torch.from_numpy(train_matrix).to(self.device)
@@ -72,8 +72,6 @@ class ReconstructionTrainer(AbstractTrainer):
                     epoch_loss += loss.item()
 
             avg_train_loss = epoch_loss / len(dataloader)
-            if (self.current_epoch + 1) % CHECKPOINT_GRANULARITY == 0:
-                self.save_state()
 
             val_loss: Optional[float] = None
             if evaluator is not None:
@@ -81,8 +79,13 @@ class ReconstructionTrainer(AbstractTrainer):
 
             self._log_epoch_information(target_epoch, avg_train_loss, val_loss)
 
+            if (self.current_epoch + 1) % CHECKPOINT_GRANULARITY == 0:
+                self.save_state()
+
             if self.scheduler is not None:
                 self.scheduler.step()
             self.current_epoch += 1
 
-        logger.info(f"Finished training of model {model_class_name}.")
+        logger.info(
+            f"Finished training of model {model_class_name} with best validation loss {self.best_val_loss:.4f}."
+        )
