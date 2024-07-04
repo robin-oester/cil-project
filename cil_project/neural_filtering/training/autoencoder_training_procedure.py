@@ -1,7 +1,7 @@
 import argparse
 import logging
 
-from cil_project.dataset import BalancedSplit, RatingsDataset, TargetNormalization
+from cil_project.dataset import RatingsDataset, TargetNormalization
 from cil_project.neural_filtering.models.autoencoder import Autoencoder
 from cil_project.neural_filtering.trainers import ReconstructionTrainer
 from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
@@ -23,9 +23,9 @@ Typical usage:
 """
 
 # learning constants
-LEARNING_RATE = 0.025
-GAMMA = 0.992
-NUM_EPOCHS = 1000
+GAMMA = 0.99
+NUM_EPOCHS = 500
+WEIGHT_DECAY = 1e-4
 
 
 class AutoencoderTrainingProcedure:
@@ -42,23 +42,27 @@ class AutoencoderTrainingProcedure:
         model = Autoencoder(self.model_hyperparameters)
 
         # initialize the trainer
-        optimizer = Adam(model.parameters())
+        optimizer = Adam(model.parameters(), weight_decay=WEIGHT_DECAY)
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=GAMMA)
         trainer = ReconstructionTrainer(model, self.batch_size, optimizer, scheduler)
 
         dataset = RatingsDataset.load(FULL_SERIALIZED_DATASET_NAME)
-        splitter = BalancedSplit(0.95, True)
 
-        train_idx, test_idx = splitter.split(dataset)
+        # uncomment for testing/hyperparameter tuning
+        # splitter = BalancedSplit(0.95, True)
 
-        train_dataset = dataset.get_split(train_idx)
-        test_dataset = dataset.get_split(test_idx)
+        # train_idx, test_idx = splitter.split(dataset)
+
+        # train_dataset = dataset.get_split(train_idx)
+        # test_dataset = dataset.get_split(test_idx)
 
         # optionally, normalize the training dataset
-        train_dataset.normalize(TargetNormalization.TO_TANH_RANGE)
+        dataset.normalize(TargetNormalization.BY_MOVIE)
+        # train_dataset.normalize(TargetNormalization.BY_MOVIE)
 
         try:
-            trainer.train(train_dataset, test_dataset, num_epochs)
+            trainer.train(dataset, None, num_epochs)
+            # trainer.train(train_dataset, test_dataset, num_epochs)
         except KeyboardInterrupt:
             logger.info("Training interrupted by the user.")
 

@@ -1,6 +1,7 @@
 from typing import Any
 
 import torch
+import torch.nn.functional as F
 from cil_project.utils import NUM_MOVIES, ModelInitializationError, validate_parameter_types
 
 from .abstract_model import AbstractModel
@@ -56,14 +57,13 @@ class Encoder(torch.nn.Module):
         self.encoder = torch.nn.Sequential(
             torch.nn.Dropout(p_dropout),
             torch.nn.Linear(NUM_MOVIES, 256),
+            torch.nn.LeakyReLU(),
             torch.nn.Dropout(p_dropout),
-            torch.nn.LeakyReLU(),
             torch.nn.Linear(256, encoding_size),
-            torch.nn.LeakyReLU(),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.encoder(x)
+        return self.encoder(F.normalize(x))
 
 
 class Decoder(torch.nn.Module):
@@ -75,8 +75,8 @@ class Decoder(torch.nn.Module):
         super().__init__()
         self.decoder = torch.nn.Sequential(
             torch.nn.Linear(encoding_size, 256),
-            torch.nn.Dropout(p_dropout),
             torch.nn.LeakyReLU(),
+            torch.nn.Dropout(p_dropout),
             torch.nn.Linear(256, NUM_MOVIES),
         )
 

@@ -23,6 +23,7 @@ class NCFImproved(AbstractModel):
         self.embedding_movie = torch.nn.Embedding(NUM_MOVIES, self.embedding_dim)
 
         self.dropout = torch.nn.Dropout(0.05)
+        self.dropout_features = torch.nn.Dropout(0.1)
 
         self.transform_u1 = MLPLayer(self.embedding_dim, self.hidden_dim)
         self.transform_u2 = MLPLayer(self.embedding_dim, self.hidden_dim)
@@ -30,7 +31,15 @@ class NCFImproved(AbstractModel):
         self.transform_m1 = MLPLayer(self.embedding_dim, self.hidden_dim)
         self.transform_m2 = MLPLayer(self.embedding_dim, self.hidden_dim)
 
-        self.fc = torch.nn.Linear(3 * self.embedding_dim, 1)
+        self.fc = torch.nn.Sequential(
+            torch.nn.Linear(3 * self.embedding_dim, 256),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.5),
+            torch.nn.Linear(256, 128),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.25),
+            torch.nn.Linear(128, 1),
+        )
 
     def _initialize_parameters(self, hyperparameters: dict[str, Any]) -> None:
         validate_parameter_types(
@@ -59,11 +68,8 @@ class NCFImproved(AbstractModel):
         u = self.dropout(user_embedding)
         m = self.dropout(movie_embedding)
 
-        u1 = self.transform_u1(u)
-        m1 = self.transform_m1(m)
-
-        u1 = u1 + user_embedding
-        m1 = m1 + movie_embedding
+        u1 = self.transform_u1(u) + user_embedding
+        m1 = self.transform_m1(m) + movie_embedding
 
         u2 = self.transform_u2(u)
         m2 = self.transform_m2(m)
@@ -71,7 +77,7 @@ class NCFImproved(AbstractModel):
         out_combined = torch.mul(u2, m2)
 
         features = torch.cat([out_combined, u1, m1], dim=1)
-        features = self.dropout(features)
+        features = self.dropout_features(features)
 
         return self.fc(features)
 

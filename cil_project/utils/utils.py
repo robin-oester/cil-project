@@ -98,5 +98,7 @@ def nanstd(arr: np.ndarray, axis: Optional[int] = None) -> np.ndarray:
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=RuntimeWarning)
         nanstds = np.nanstd(arr, axis=axis)
-        globalmean = np.nanmean(nanstds)
-    return np.where(np.isnan(nanstds), globalmean, nanstds)
+        globalstd = np.nanmean(nanstds)
+        newarr = np.where(np.isnan(nanstds), globalstd, nanstds)
+        newarr[newarr == 0] = globalstd
+    return newarr

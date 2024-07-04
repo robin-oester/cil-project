@@ -5,6 +5,7 @@ from cil_project.dataset import BalancedSplit, RatingsDataset, TargetNormalizati
 from cil_project.neural_filtering.models import NCFImproved
 from cil_project.neural_filtering.trainers import RatingTrainer
 from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
+from torch import optim
 from torch.optim import Adam
 
 logging.basicConfig(
@@ -22,9 +23,10 @@ Typical usage:
 """
 
 # learning constants
-LEARNING_RATE = 0.001
+LEARNING_RATE = 1e-3
 NUM_EPOCHS = 100
 WEIGHT_DECAY = 1e-4
+GAMMA = 0.97
 
 
 class NCFImprovedProcedure:
@@ -48,9 +50,10 @@ class NCFImprovedProcedure:
         model = NCFImproved(self.hyperparameters)
 
         optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=GAMMA)
 
         # initialize the trainer
-        trainer = RatingTrainer(model, self.batch_size, optimizer)
+        trainer = RatingTrainer(model, self.batch_size, optimizer, scheduler)
 
         dataset = RatingsDataset.load(FULL_SERIALIZED_DATASET_NAME)
         splitter = BalancedSplit(0.95, True)
@@ -61,7 +64,7 @@ class NCFImprovedProcedure:
         test_dataset = dataset.get_split(test_idx)
 
         # optionally, normalize the training dataset
-        train_dataset.normalize(TargetNormalization.TO_TANH_RANGE)
+        train_dataset.normalize(TargetNormalization.BY_MOVIE)
 
         try:
             trainer.train(train_dataset, test_dataset, num_epochs)
