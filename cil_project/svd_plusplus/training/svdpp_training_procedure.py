@@ -1,6 +1,6 @@
 import logging
 
-from cil_project.dataset import BalancedKFold, BalancedSplit, RatingsDataset
+from cil_project.dataset import BalancedKFold, RatingsDataset  # , BalancedSplit
 from cil_project.svd_plusplus.model import SVDPP
 from cil_project.svd_plusplus.trainer import SVDPPTrainer
 from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
@@ -42,12 +42,12 @@ class SVDPPTrainingProcedure:
         self.trainer = SVDPPTrainer(model, self.batch_size, optimizer, scheduler)
 
     def start_training(self) -> None:
-        #splitter = BalancedSplit(0.75, True)
+        # splitter = BalancedSplit(0.75, True)
 
-        #train_idx, test_idx = splitter.split(self.dataset)
+        # train_idx, test_idx = splitter.split(self.dataset)
 
-        #train_dataset = self.dataset.get_split(train_idx)
-        #test_dataset = self.dataset.get_split(test_idx)
+        # train_dataset = self.dataset.get_split(train_idx)
+        # test_dataset = self.dataset.get_split(test_idx)
 
         try:
             self.trainer.train(self.dataset, None, NUM_EPOCHS)

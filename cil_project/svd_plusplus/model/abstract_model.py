@@ -39,10 +39,10 @@ class AbstractModel(ABC, torch.nn.Module):
         hyperparameters = loaded_dict["hyperparameters"]
         model = cls(hyperparameters)
         model.load_state_dict(loaded_dict["model"])
-        model.mu = loaded_dict["heuristics"]["mu"]
-        model.bu =  loaded_dict["heuristics"]["bu"]
-        model.bi = loaded_dict["heuristics"]["bi"]
-        model.y = loaded_dict["heuristics"]["y"]
+        model.mu = loaded_dict["heuristics"]["mu"]  # pylint: disable=attribute-defined-outside-init
+        model.bu = loaded_dict["heuristics"]["bu"]  # pylint: disable=attribute-defined-outside-init
+        model.bi = loaded_dict["heuristics"]["bi"]  # pylint: disable=attribute-defined-outside-init
+        model.y = loaded_dict["heuristics"]["y"]  # pylint: disable=attribute-defined-outside-init
 
         return model
 
