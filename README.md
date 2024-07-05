@@ -12,6 +12,9 @@ For local development, you need to have [conda](https://conda.io/projects/conda/
 conda env create -f ./environment.yml
 conda activate cil-project
 
+# install the project
+pip install -e .
+
 # for contributing
 pip install -r dev-requirements.txt
 chmod +x run_code_compliance.sh
@@ -20,6 +23,7 @@ chmod +x run_code_compliance.sh
 If the environment.yml file is updated, additionally run
 ```
 conda env update -f environment.yml --prune
+pip install -e .
 ```
 to keep the dependencies up to date.
 
