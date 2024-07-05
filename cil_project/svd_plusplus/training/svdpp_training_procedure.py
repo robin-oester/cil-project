@@ -1,11 +1,14 @@
 import logging
-
-from cil_project.dataset import BalancedKFold, BalancedSplit, RatingsDataset  # , TargetNormalization
+import os
+from cil_project.dataset import BalancedKFold, BalancedSplit, RatingsDataset
 from cil_project.svd_plusplus.model import SVDPP
 from cil_project.svd_plusplus.trainer import SVDPPTrainer
 from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
+from cil_project.svd_plusplus.evaluators import SVDPPEvaluator
 from torch import optim
 from torch.optim import Adam
+import torch
+import numpy as np
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -18,6 +21,17 @@ logger = logging.getLogger(__name__)
 This script is used to train svdpp.
 Typical usage: python3 cil_project/../svdpp_training_procedure.py
 """
+
+
+STORE_KFOLD = False
+if STORE_KFOLD:
+    np.random.seed(0)
+    torch.manual_seed(0)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(0)
+        torch.cuda.manual_seed_all(0)
+
+
 
 LEARNING_RATE = 0.002
 DECAY = 0.7
@@ -48,7 +62,6 @@ class SVDPPTrainingProcedure:
         train_idx, test_idx = splitter.split(self.dataset)
 
         train_dataset = self.dataset.get_split(train_idx)
-        # train_dataset.normalize(normalization=TargetNormalization.BY_MOVIE)
         test_dataset = self.dataset.get_split(test_idx)
 
         try:
@@ -76,6 +89,14 @@ class SVDPPTrainingProcedure:
 
             try:
                 self.trainer.train(train_dataset, test_dataset, NUM_EPOCHS)
+                if STORE_KFOLD:
+                    print("length of test dataset: ", len(test_dataset))
+                    evaluator = SVDPPEvaluator(model, 64, train_dataset, None)
+                    preds = evaluator.predict(test_dataset.get_inputs())
+                    file_path = os.path.join(os.path.dirname(__file__), "svdpp_kfold_results.txt")
+                    with open(file_path, 'ab') as f:
+                        np.savetxt(f, preds, fmt='%f')
+
                 avg_rmse += self.trainer.validation_loss
 
             except KeyboardInterrupt:
@@ -100,8 +121,8 @@ def main() -> None:
 
     dataset = RatingsDataset.load(dataset_name)
     training_procedure = SVDPPTrainingProcedure(hyperparameters, batch_size, dataset)
-    training_procedure.start_training()
-    # training_procedure.start_kfold_training()
+    # training_procedure.start_training()
+    training_procedure.start_kfold_training()
 
 
 if __name__ == "__main__":
