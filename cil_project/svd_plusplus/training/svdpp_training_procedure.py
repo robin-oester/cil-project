@@ -1,14 +1,15 @@
 import logging
 import os
+
+import numpy as np
+import torch
 from cil_project.dataset import BalancedKFold, BalancedSplit, RatingsDataset
+from cil_project.svd_plusplus.evaluators import SVDPPEvaluator
 from cil_project.svd_plusplus.model import SVDPP
 from cil_project.svd_plusplus.trainer import SVDPPTrainer
 from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
-from cil_project.svd_plusplus.evaluators import SVDPPEvaluator
 from torch import optim
 from torch.optim import Adam
-import torch
-import numpy as np
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -30,7 +31,6 @@ if STORE_KFOLD:
     if torch.cuda.is_available():
         torch.cuda.manual_seed(0)
         torch.cuda.manual_seed_all(0)
-
 
 
 LEARNING_RATE = 0.002
@@ -70,6 +70,7 @@ class SVDPPTrainingProcedure:
         except KeyboardInterrupt:
             logger.info("Training interrupted by the user.")
 
+    # pylint: disable=too-many-locals
     def start_kfold_training(self, num_folds: int = 10) -> None:
         avg_rmse = 0.0
         kfold = BalancedKFold(num_folds=num_folds, shuffle=True)
@@ -94,8 +95,8 @@ class SVDPPTrainingProcedure:
                     evaluator = SVDPPEvaluator(model, 64, train_dataset, None)
                     preds = evaluator.predict(test_dataset.get_inputs())
                     file_path = os.path.join(os.path.dirname(__file__), "svdpp_kfold_results.txt")
-                    with open(file_path, 'ab') as f:
-                        np.savetxt(f, preds, fmt='%f')
+                    with open(file_path, "ab") as f:
+                        np.savetxt(f, preds, fmt="%f")
 
                 avg_rmse += self.trainer.validation_loss
 
