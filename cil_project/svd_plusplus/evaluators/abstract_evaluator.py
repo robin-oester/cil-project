@@ -30,6 +30,11 @@ class AbstractEvaluator(RatingPredictor):
         self.val_dataset = val_dataset
         self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
 
+        if self.val_dataset is not None:
+            mean, std = self.dataset.get_denormalization_statistics(self.val_dataset.get_inputs())
+            self.val_mean = mean
+            self.val_std = std
+
     @abstractmethod
     def _predict(self, inputs: np.ndarray) -> np.ndarray:
         """
@@ -49,9 +54,21 @@ class AbstractEvaluator(RatingPredictor):
         """
 
         assert self.val_dataset is not None, "Validation dataset is required for evaluation."
+        assert not self.val_dataset.is_normalized(), "Validation dataset must not be normalized."
 
-        predictions = self.predict(self.val_dataset.get_inputs())
-        return rmse(self.val_dataset.get_targets(), predictions)
+        predictions = self._predict(self.val_dataset.get_inputs())
+
+        assert (
+            self.val_mean.shape == predictions.shape
+        ), f"Shapes of predictions and mean do not match ({predictions.shape} vs {self.val_mean.shape}"
+        assert (
+            self.val_std.shape == predictions.shape
+        ), f"Shapes of predictions and std do not match ({predictions.shape} vs {self.val_std.shape}"
+
+        denormalized_predictions = np.multiply(predictions, self.val_std) + self.val_mean
+
+        clipped_predictions = np.clip(denormalized_predictions, MIN_RATING, MAX_RATING)
+        return rmse(self.val_dataset.get_targets(), clipped_predictions)
 
     def predict(self, inputs: np.ndarray) -> np.ndarray:
         """
@@ -63,10 +80,18 @@ class AbstractEvaluator(RatingPredictor):
 
         assert inputs.shape[1] == 2, "Inputs must have shape (N, 2)."
 
-        self.model.to(self.device)
         predictions = self._predict(inputs)
 
-        denormalized_predictions = self.dataset.denormalize_predictions(inputs, predictions)
+        mean, std = self.dataset.get_denormalization_statistics(inputs)
+
+        assert (
+            mean.shape == predictions.shape
+        ), f"Shapes of predictions and mean do not match ({predictions.shape} vs {mean.shape}"
+        assert (
+            std.shape == predictions.shape
+        ), f"Shapes of predictions and std do not match ({predictions.shape} vs {std.shape}"
+
+        denormalized_predictions = np.multiply(predictions, std) + mean
 
         return np.clip(denormalized_predictions, MIN_RATING, MAX_RATING)
 

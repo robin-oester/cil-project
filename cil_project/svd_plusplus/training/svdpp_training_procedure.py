@@ -1,6 +1,6 @@
 import logging
 
-from cil_project.dataset import BalancedKFold, RatingsDataset  # , BalancedSplit
+from cil_project.dataset import BalancedKFold, BalancedSplit, RatingsDataset  # , TargetNormalization
 from cil_project.svd_plusplus.model import SVDPP
 from cil_project.svd_plusplus.trainer import SVDPPTrainer
 from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
@@ -19,8 +19,9 @@ This script is used to train svdpp.
 Typical usage: python3 cil_project/../svdpp_training_procedure.py
 """
 
-LEARNING_RATE = 0.0015
+LEARNING_RATE = 0.002
 DECAY = 0.7
+WEIGHT_DECAY = 1e-5
 NUM_EPOCHS = 5
 
 
@@ -36,21 +37,23 @@ class SVDPPTrainingProcedure:
 
         model = SVDPP(hyperparameters)
         # initialize the trainer
-        optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
+        optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=DECAY)
 
         self.trainer = SVDPPTrainer(model, self.batch_size, optimizer, scheduler)
 
     def start_training(self) -> None:
-        # splitter = BalancedSplit(0.75, True)
+        splitter = BalancedSplit(0.75, True)
 
-        # train_idx, test_idx = splitter.split(self.dataset)
+        train_idx, test_idx = splitter.split(self.dataset)
 
-        # train_dataset = self.dataset.get_split(train_idx)
-        # test_dataset = self.dataset.get_split(test_idx)
+        train_dataset = self.dataset.get_split(train_idx)
+        # train_dataset.normalize(normalization=TargetNormalization.BY_MOVIE)
+        test_dataset = self.dataset.get_split(test_idx)
 
         try:
-            self.trainer.train(self.dataset, None, NUM_EPOCHS)
+            self.trainer.train(train_dataset, test_dataset, NUM_EPOCHS)
+            # self.trainer.train(self.dataset, None, NUM_EPOCHS) # train on whole dataset
         except KeyboardInterrupt:
             logger.info("Training interrupted by the user.")
 
@@ -63,7 +66,7 @@ class SVDPPTrainingProcedure:
 
             # initialize the trainer
             model = SVDPP(self.hyperparameters)
-            optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
+            optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
             scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=DECAY)
             self.trainer = SVDPPTrainer(model, self.batch_size, optimizer, scheduler)
 
