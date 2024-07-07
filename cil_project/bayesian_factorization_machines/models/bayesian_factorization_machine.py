@@ -1,10 +1,9 @@
 # This code is adapted from https://myfm.readthedocs.io/en/stable/index.html
 
 import numpy as np
-import pandas as pd
-from cil_project.dataset import RatingsDataset
+from cil_project.dataset import RatingsDataset, SubmissionDataset
 from cil_project.ensembling import RatingPredictor
-from cil_project.utils import FULL_SERIALIZED_DATASET_NAME, MAX_RATING, MIN_RATING, rmse
+from cil_project.utils import DATA_PATH, MAX_RATING, MIN_RATING, SUBMISSION_FILE_NAME, rmse
 from myfm import MyFMRegressor  # pylint: disable=E0401
 
 from .abstract_model import AbstractModel
@@ -16,59 +15,80 @@ class BayesianFactorizationMachine(AbstractModel, RatingPredictor):
         rank: int = 4,
         grouped: bool = False,
         implicit: bool = False,
+        statistical_features: bool = False,
     ) -> None:
-        super().__init__(rank, grouped, implicit)
+        super().__init__(rank, grouped, implicit, statistical_features)
 
         self.model = MyFMRegressor(rank=rank, random_seed=42)
+        self.train_dataset = None
 
     # pylint: disable=R0914
 
     def train(
         self,
-        df_train: pd.DataFrame,
-        df_test: pd.DataFrame,
+        train_dataset: RatingsDataset,
+        test_dataset: RatingsDataset,
         n_iter: int = 300,
-    ) -> None:
+    ) -> float:
         print("Training Bayesian Factorization Machine...")
 
-        feature_columns = ["user", "movie"]
-        x_train, x_test = df_train[feature_columns], df_test[feature_columns]
-        y_train, y_test = df_train["rating"], df_test["rating"]
+        y_train = train_dataset.get_targets().reshape(1, -1)[0]
+        y_test = test_dataset.get_targets().reshape(1, -1)[0]
 
-        print(f"Training on {len(x_train)} samples, testing on {len(x_test)} samples...")
-
-        # Get the one-hot encoding of the features and (optionally) implicit features (as RelationBlocks)
-
-        block_user_train, block_movie_train, block_user_test, block_movie_test, group_shapes = self.get_features(
-            df_train, df_test
-        )
+        # Get the one-hot encoding of the features
+        x_rel_train = self.get_features(train_dataset, train_dataset)
+        x_rel_test = self.get_features(test_dataset, train_dataset)
+        group_shapes = self.get_group_shapes()
 
         n_kept_samples = n_iter
 
         self.model.fit(
             None,
             y_train,
-            X_rel=[block_user_train, block_movie_train],
+            X_rel=x_rel_train,
             n_iter=n_iter,
             n_kept_samples=n_kept_samples,
             group_shapes=group_shapes,
         )
 
-        y_pred = self.model.predict(None, X_rel=[block_user_test, block_movie_test])
+        y_pred = self.model.predict(None, X_rel=x_rel_test, n_workers=8)
+        y_pred = np.clip(y_pred, MIN_RATING, MAX_RATING)
 
         error = rmse(y_test, y_pred)
         print(f"RMSE: {error}")
+        return error
+
+    def final_train(
+        self,
+        dataset: RatingsDataset,
+        n_iter: int = 300,
+    ) -> None:
+        print("Training Bayesian Factorization Machine...")
+
+        self.train_dataset = dataset
+        y_train = dataset.get_targets().reshape(1, -1)[0]
+        x_rel_train = self.get_features(dataset, dataset)
+        group_shapes = self.get_group_shapes()
+        n_kept_samples = n_iter
+
+        self.model.fit(
+            None,
+            y_train,
+            X_rel=x_rel_train,
+            n_iter=n_iter,
+            n_kept_samples=n_kept_samples,
+            group_shapes=group_shapes,
+        )
 
     def predict(self, x: np.ndarray) -> np.ndarray:
-        if self.model is None:
+        if self.train_dataset is None:
             raise ValueError("Model is not trained yet. Call the 'train' method to train the model.")
 
-        x_df = pd.DataFrame([x], columns=["user", "movie"])
-        dataset = RatingsDataset.load(FULL_SERIALIZED_DATASET_NAME)
-
-        _, _, block_user, block_movie, _ = self.get_features(dataset.get_data_frame()[["user", "movie"]], x_df)
-        y_pred = self.model.predict(None, X_rel=[block_user, block_movie])
-        return np.clip(y_pred, MIN_RATING, MAX_RATING)
+        input_path = DATA_PATH / SUBMISSION_FILE_NAME
+        submission_dataset = SubmissionDataset(input_path)
+        x_rel = self.get_features(submission_dataset, self.train_dataset)
+        y_pred = self.model.predict(None, X_rel=x_rel, n_workers=8)
+        return np.clip(y_pred, MIN_RATING, MAX_RATING).reshape(-1, 1)
 
     def get_name(self) -> str:
         return self.model.__class__.__name__

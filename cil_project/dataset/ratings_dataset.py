@@ -5,11 +5,9 @@ import re
 from typing import Optional
 
 import numpy as np
-import pandas as pd
 import torch
-from cil_project.utils import DATA_PATH, MAX_RATING, MIN_RATING
-from sklearn.preprocessing import OneHotEncoder
-from torch.utils.data import Dataset  # pylint: disable=E0401
+from cil_project.utils import DATA_PATH, MAX_RATING, MIN_RATING, nanmean, nanstd
+from torch.utils.data import Dataset
 
 from .target_normalization import TargetNormalization
 
@@ -46,14 +44,17 @@ class RatingsDataset(Dataset):
         self._num_movies = num_movies
 
         # compute dataset statistics
-        data_matrix = self.get_data_matrix()
-        self._user_means = data_matrix.mean(1)  # shape: (num_users,)
-        self._movie_means = data_matrix.mean(0)  # shape: (num_movies,)
-        self._target_mean = targets.mean()
+        data_matrix = self.get_data_matrix(fill_value=np.nan)
 
-        self._user_stds = data_matrix.std(1)
-        self._movie_stds = data_matrix.std(0)
-        self._target_std = targets.std()
+        # get mean by user without considering nans
+        self._user_means = nanmean(data_matrix, axis=1).reshape(-1, 1)  # shape: (num_users, 1)
+        self._user_stds = nanstd(data_matrix, axis=1).reshape(-1, 1)
+
+        self._movie_means = nanmean(data_matrix, axis=0).reshape(-1, 1)  # shape: (num_movies, 1)
+        self._movie_stds = nanstd(data_matrix, axis=0).reshape(-1, 1)
+
+        self._target_mean = targets.mean().reshape(-1, 1)  # shape: (num_targets, 1)
+        self._target_std = targets.std().reshape(-1, 1)
 
         # initially no normalization
         self._normalization: Optional[TargetNormalization] = None
@@ -73,11 +74,12 @@ class RatingsDataset(Dataset):
         assert self._num_movies == dataset._num_movies, "Movie number doesn't match"
 
         self._user_means = dataset._user_means
-        self._movie_means = dataset._movie_means
-        self._target_mean = dataset._target_mean
-
         self._user_stds = dataset._user_stds
+
+        self._movie_means = dataset._movie_means
         self._movie_stds = dataset._movie_stds
+
+        self._target_mean = dataset._target_mean
         self._target_std = dataset._target_std
 
     def normalize(self, normalization: TargetNormalization) -> None:
@@ -89,24 +91,16 @@ class RatingsDataset(Dataset):
 
         assert self._normalization is None, "Dataset should not be normalized at this point"
 
-        # this is Normalization.TO_TANH_RANGE
-        mean = 3.0
-        std = 2.0
-        for i in range(len(self)):
-            if normalization == TargetNormalization.BY_USER:
-                user_id = self._inputs[i, 0]
-                mean = self._user_means[user_id]
-                std = self._user_stds[user_id]
-            elif normalization == TargetNormalization.BY_MOVIE:
-                movie_id = self._inputs[i, 1]
-                mean = self._movie_means[movie_id]
-                std = self._movie_stds[movie_id]
-            elif normalization == TargetNormalization.BY_TARGET:
-                mean = self._target_mean
-                std = self._target_std
+        mean, std = self._get_normalization_statistics(normalization)
 
-            self._targets[i] = (self._targets[i] - mean) / std
+        assert (
+            mean.shape == self._targets.shape
+        ), f"Shapes of target and mean do not match ({self._targets.shape} vs {mean.shape}"
+        assert (
+            std.shape == self._targets.shape
+        ), f"Shapes of target and std do not match ({self._targets.shape} vs {std.shape}"
 
+        self._targets = np.divide(self._targets - mean, std)
         self._normalization = normalization
 
     def denormalize(self) -> None:
@@ -114,58 +108,71 @@ class RatingsDataset(Dataset):
         Denormalizes the targets if they have been normalized.
         """
 
-        if self.is_normalized():
-            # this is Normalization.TO_TANH_RANGE
-            mean = 3.0
-            std = 2.0
-
-            for i in range(len(self)):
-                if self._normalization == TargetNormalization.BY_USER:
-                    user_id = self._inputs[i, 0]
-                    mean = self._user_means[user_id]
-                    std = self._user_stds[user_id]
-                elif self._normalization == TargetNormalization.BY_MOVIE:
-                    movie_id = self._inputs[i, 1]
-                    mean = self._movie_means[movie_id]
-                    std = self._movie_stds[movie_id]
-                elif self._normalization == TargetNormalization.BY_TARGET:
-                    mean = self._target_mean
-                    std = self._target_std
-
-                self._targets[i] = self._targets[i] * std + mean
+        if self._normalization is not None:
+            mean, std = self._get_normalization_statistics(self._normalization)
+            self._targets = np.multiply(self._targets, std) + mean
         self._normalization = None
 
-    def denormalize_predictions(self, test_inputs: np.ndarray, outputs: np.ndarray) -> np.ndarray:
+    def _get_normalization_statistics(self, normalization: TargetNormalization) -> tuple[np.ndarray, np.ndarray]:
         """
-        Denormalizes the predictions if they have been normalized.
+        Returns the mean and std arrays for normalization.
+
+        :param normalization: the type of normalization.
+        :return: the mean and std arrays for normalization.
+        """
+
+        mean = np.empty((len(self), 1), dtype=np.float32)
+        std = np.empty((len(self), 1), dtype=np.float32)
+
+        if normalization.value == TargetNormalization.BY_USER.value:
+            mean[:] = self._user_means[self._inputs[:, 0]]
+            std[:] = self._user_stds[self._inputs[:, 0]]
+        elif normalization.value == TargetNormalization.BY_MOVIE.value:
+            mean[:] = self._movie_means[self._inputs[:, 1]]
+            std[:] = self._movie_stds[self._inputs[:, 1]]
+        elif normalization.value == TargetNormalization.BY_TARGET.value:
+            mean.fill(self._target_mean)
+            std.fill(self._target_std)
+        else:
+            # this is TargetNormalization.TO_TANH_RANGE
+            mean.fill(3.0)
+            std.fill(2.0)
+
+        return mean, std
+
+    def get_denormalization_statistics(self, test_inputs: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Returns the mean and std arrays for denormalization.
 
         :param test_inputs: the inputs to test (shape: N x 2).
-        :param outputs: the normalized outputs (shape: N x 1).
-        :return: the denormalized outputs (shape: N x 1).
+        :return: the mean and std arrays that can be used for denormalization.
         """
 
         assert test_inputs.shape[1] == 2
-        assert test_inputs.shape[0] == outputs.shape[0]
 
-        if self.is_normalized():
-            # this is Normalization.TO_TANH_RANGE
-            mean = 3.0
-            std = 2.0
+        mean = np.empty((test_inputs.shape[0], 1), dtype=np.float32)
+        std = np.empty((test_inputs.shape[0], 1), dtype=np.float32)
 
-            for idx, (user_id, movie_id) in enumerate(test_inputs):
-                if self._normalization == TargetNormalization.BY_USER:
-                    mean = self._user_means[user_id]
-                    std = self._user_stds[user_id]
-                elif self._normalization == TargetNormalization.BY_MOVIE:
-                    mean = self._movie_means[movie_id]
-                    std = self._movie_stds[movie_id]
-                elif self._normalization == TargetNormalization.BY_TARGET:
-                    mean = self._target_mean
-                    std = self._target_std
+        if self._normalization is None:
+            mean.fill(0.0)
+            std.fill(1.0)
+            return mean, std
 
-                outputs[idx] = outputs[idx] * std + mean
+        if self._normalization.value == TargetNormalization.BY_USER.value:
+            mean[:] = self._user_means[test_inputs[:, 0]]
+            std[:] = self._user_stds[test_inputs[:, 0]]
+        elif self._normalization.value == TargetNormalization.BY_MOVIE.value:
+            mean[:] = self._movie_means[test_inputs[:, 1]]
+            std[:] = self._movie_stds[test_inputs[:, 1]]
+        elif self._normalization.value == TargetNormalization.BY_TARGET.value:
+            mean.fill(self._target_mean)
+            std.fill(self._target_std)
+        else:
+            # this is TargetNormalization.TO_TANH_RANGE
+            mean.fill(3.0)
+            std.fill(2.0)
 
-        return outputs
+        return mean, std
 
     @classmethod
     def from_file(cls, file_path: pathlib.Path, num_users: int = 10_000, num_movies: int = 1_000) -> "RatingsDataset":
@@ -331,20 +338,3 @@ class RatingsDataset(Dataset):
 
     def get_targets(self) -> np.ndarray:
         return self._targets
-
-    def get_data_frame(self) -> pd.DataFrame:
-        """
-        Returns the dataset as a pandas DataFrame.
-        """
-        data = np.concatenate((self._inputs, self._targets), axis=1)
-        df = pd.DataFrame(data, columns=["user", "movie", "rating"])
-        return df
-
-    def get_one_hot_encoder(self) -> OneHotEncoder:
-        """
-        Returns the OneHotEncoder used to encode the user and movie IDs.
-        """
-        ohe = OneHotEncoder(handle_unknown="ignore")
-        df = self.get_data_frame()
-        ohe.fit(df[["user", "movie"]])  # pylint: disable=E1136
-        return ohe
