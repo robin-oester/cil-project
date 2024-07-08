@@ -125,6 +125,9 @@ class RatingsDataset(Dataset):
         elif normalization.value == TargetNormalization.BY_TARGET.value:
             mean.fill(self._target_mean)
             std.fill(self._target_std)
+        elif normalization.value == TargetNormalization.TO_UNIT_RANGE.value:
+            mean.fill(1.0)
+            std.fill(4.0)
         else:
             # this is TargetNormalization.TO_TANH_RANGE
             mean.fill(3.0)
@@ -159,6 +162,9 @@ class RatingsDataset(Dataset):
         elif self._normalization.value == TargetNormalization.BY_TARGET.value:
             mean.fill(self._target_mean)
             std.fill(self._target_std)
+        elif self._normalization.value == TargetNormalization.TO_UNIT_RANGE.value:
+            mean.fill(1.0)
+            std.fill(4.0)
         else:
             # this is TargetNormalization.TO_TANH_RANGE
             mean.fill(3.0)
@@ -290,6 +296,32 @@ class RatingsDataset(Dataset):
 
         for user_id, movie_id in self._inputs:
             ratings[user_id][movie_id] = 1
+        return ratings
+
+    def get_num_ratings_per_user(self) -> np.ndarray:
+        """
+        Returns the number of ratings per user.
+
+        :return: the number of ratings per user as N x 1 array.
+        """
+
+        ratings = np.zeros((NUM_USERS, 1), dtype=np.int32)
+
+        for user_id, _ in self._inputs:
+            ratings[user_id] += 1
+        return ratings
+
+    def get_num_ratings_per_movie(self) -> np.ndarray:
+        """
+        Returns the number of ratings per movie.
+
+        :return: the number of ratings per movie as M x 1 array.
+        """
+
+        ratings = np.zeros((NUM_MOVIES, 1), dtype=np.int32)
+
+        for _, movie_id in self._inputs:
+            ratings[movie_id] += 1
         return ratings
 
     def __len__(self) -> int:

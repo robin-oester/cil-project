@@ -1,23 +1,24 @@
 import csv
 import pathlib
-import time
+from typing import Optional
 
 from cil_project.dataset import SubmissionDataset
 from cil_project.utils import DATA_PATH
 
 
-def write_predictions_to_csv(submission_dataset: SubmissionDataset, predictor_name: str) -> pathlib.Path:
+def write_predictions_to_csv(submission_dataset: SubmissionDataset, model_name: str, fold_idx: Optional[int] = None) -> pathlib.Path:
     """
     Write the predictions to a csv file. The predictions are aggregated in the submission dataset.
+    Stores them as <model_name>_<fold_idx>.csv if fold_idx is not None, otherwise as <model_name>.csv.
 
     :param submission_dataset: the submission dataset containing the predictions.
-    :param predictor_name: name of the predictor.
+    :param model_name: name of the model.
+    :param fold_idx: index of the fold. If None, the model is not part of a k-fold evaluation.
     :return: path to the generated file.
     """
 
     # create csv file with predictions
-    millis = int(time.time())
-    output_file_path = DATA_PATH / f"{predictor_name}_{millis}.csv"
+    output_file_path = DATA_PATH / (f"{model_name}_{fold_idx}.csv" if fold_idx is not None else f"{model_name}.csv")
     with open(output_file_path, "w", encoding="utf-8") as output_file:
         writer = csv.writer(output_file)
         writer.writerow(["Id", "Prediction"])

@@ -12,3 +12,4 @@ class TargetNormalization(Enum):
     BY_MOVIE = 2
     BY_TARGET = 3
     TO_TANH_RANGE = 4  # targets are in [-1, 1] -> useful for tanh activation
+    TO_UNIT_RANGE = 5  # transform targets to [0, 1]
