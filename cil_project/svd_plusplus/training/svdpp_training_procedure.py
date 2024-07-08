@@ -1,13 +1,14 @@
 import logging
 import os
+import csv
 
 import numpy as np
 import torch
-from cil_project.dataset import BalancedKFold, BalancedSplit, RatingsDataset
+from cil_project.dataset import BalancedKFold, BalancedSplit, RatingsDataset, SubmissionDataset
 from cil_project.svd_plusplus.evaluators import SVDPPEvaluator
 from cil_project.svd_plusplus.model import SVDPP
 from cil_project.svd_plusplus.trainer import SVDPPTrainer
-from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
+from cil_project.utils import FULL_SERIALIZED_DATASET_NAME, DATA_PATH, SUBMISSION_FILE_NAME
 from torch import optim
 from torch.optim import Adam
 
@@ -23,20 +24,37 @@ This script is used to train svdpp.
 Typical usage: python3 cil_project/../svdpp_training_procedure.py
 """
 
-
-STORE_KFOLD = False
-if STORE_KFOLD:
-    np.random.seed(0)
-    torch.manual_seed(0)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed(0)
-        torch.cuda.manual_seed_all(0)
-
-
+# hyperparameters
 LEARNING_RATE = 0.002
 DECAY = 0.7
 WEIGHT_DECAY = 1e-5
 NUM_EPOCHS = 5
+BATCH_SIZE = 4096
+NR_FACTORS = 180
+LAM = 0.03
+LAM1 = 10.0
+LAM2 = 25.0
+LAM3 = 10.0
+
+
+def store_to_csv(inputs: np.ndarray, predictions: np.ndarray, file_name: str) -> None:
+    """
+    Store the predictions to a csv file.
+
+    :param inputs: The inputs for which the predictions were made. Expected shape (N, 2).
+    :param predictions: The predictions. Expected shape (N,1).
+    :param file_name: The file name of the csv file.
+    """
+    file_path = DATA_PATH / f"{file_name}.csv"
+    
+    with open(file_path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        
+        writer.writerow(["Id", "Prediction"])
+        
+        for i in range(inputs.shape[0]):
+            row_id = f"r{inputs[i, 0]+1}_c{inputs[i, 1]+1}"
+            writer.writerow([row_id, predictions[i, 0]])
 
 
 class SVDPPTrainingProcedure:
@@ -90,14 +108,6 @@ class SVDPPTrainingProcedure:
 
             try:
                 self.trainer.train(train_dataset, test_dataset, NUM_EPOCHS)
-                if STORE_KFOLD:
-                    print("length of test dataset: ", len(test_dataset))
-                    evaluator = SVDPPEvaluator(model, 64, train_dataset, None)
-                    preds = evaluator.predict(test_dataset.get_inputs())
-                    file_path = os.path.join(os.path.dirname(__file__), "svdpp_kfold_results.txt")
-                    with open(file_path, "ab") as f:
-                        np.savetxt(f, preds, fmt="%f")
-
                 avg_rmse += self.trainer.validation_loss
 
             except KeyboardInterrupt:
@@ -105,14 +115,59 @@ class SVDPPTrainingProcedure:
 
         avg_rmse /= num_folds
         logger.info(f"Average RMSE over {num_folds} folds: {avg_rmse}")
+    
+
+    def generate_data_for_stacking(self) -> None:
+        np.random.seed(0)
+        torch.manual_seed(0)
+        num_folds = 10
+        avg_rmse = 0.0
+        for fold in range(10):
+            # initialize the trainer
+            model = SVDPP(self.hyperparameters)
+            optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+            scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=DECAY)
+            self.trainer = SVDPPTrainer(model, self.batch_size, optimizer, scheduler)
+
+            # taining and validation split
+            train_dataset = RatingsDataset.load(f"stacking_train_{fold}")
+            val_dataset = RatingsDataset.load(f"stacking_val_{fold}")
+
+            try:
+                self.trainer.train(train_dataset, val_dataset, NUM_EPOCHS)
+                evaluator = SVDPPEvaluator(model, 64, train_dataset, None)
+                preds = evaluator.predict(val_dataset.get_inputs())
+                store_to_csv(val_dataset.get_inputs(), preds, f"{evaluator.get_name()}_{fold}")
+                avg_rmse += self.trainer.validation_loss
+
+            except KeyboardInterrupt:
+                logger.info("Training interrupted by the user.")
+
+        avg_rmse /= num_folds
+        logger.info(f"Average RMSE over {num_folds} folds: {avg_rmse}")
+        try:
+            # initialize the trainer
+            model = SVDPP(self.hyperparameters)
+            optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+            scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=DECAY)
+            self.trainer = SVDPPTrainer(model, self.batch_size, optimizer, scheduler)
+
+            self.trainer.train(self.dataset, None, NUM_EPOCHS)
+            evaluator = SVDPPEvaluator(model, 64, self.dataset, None)
+            inpts = SubmissionDataset(DATA_PATH / SUBMISSION_FILE_NAME).inputs
+            preds = evaluator.predict(inpts)
+            store_to_csv(inpts, preds, f"{evaluator.get_name()}")
+
+        except KeyboardInterrupt:
+            logger.info("Training interrupted by the user.")
 
 
 def main() -> None:
 
     # hyperparameters
-    hyperparameters = {"nr_factors": 180, "lam": 0.03, "lam1": 10.0, "lam2": 25.0, "lam3": 10.0}
+    hyperparameters = {"nr_factors": NR_FACTORS, "lam": LAM, "lam1": LAM1, "lam2": LAM2, "lam3": LAM3}
 
-    batch_size = 4096  # works fine
+    batch_size = BATCH_SIZE
     dataset_name = FULL_SERIALIZED_DATASET_NAME
 
     logger.info(
@@ -122,8 +177,9 @@ def main() -> None:
 
     dataset = RatingsDataset.load(dataset_name)
     training_procedure = SVDPPTrainingProcedure(hyperparameters, batch_size, dataset)
+    training_procedure.generate_data_for_stacking()
     # training_procedure.start_training()
-    training_procedure.start_kfold_training()
+    # training_procedure.start_kfold_training()
 
 
 if __name__ == "__main__":
