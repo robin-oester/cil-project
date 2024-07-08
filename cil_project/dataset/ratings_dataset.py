@@ -305,11 +305,7 @@ class RatingsDataset(Dataset):
         :return: the number of ratings per user as N x 1 array.
         """
 
-        ratings = np.zeros((NUM_USERS, 1), dtype=np.int32)
-
-        for user_id, _ in self._inputs:
-            ratings[user_id] += 1
-        return ratings
+        return np.bincount(self._inputs[:, 0], minlength=NUM_USERS).reshape(-1, 1)
 
     def get_num_ratings_per_movie(self) -> np.ndarray:
         """
@@ -318,11 +314,7 @@ class RatingsDataset(Dataset):
         :return: the number of ratings per movie as M x 1 array.
         """
 
-        ratings = np.zeros((NUM_MOVIES, 1), dtype=np.int32)
-
-        for _, movie_id in self._inputs:
-            ratings[movie_id] += 1
-        return ratings
+        return np.bincount(self._inputs[:, 1], minlength=NUM_MOVIES).reshape(-1, 1)
 
     def __len__(self) -> int:
         return len(self._targets)
