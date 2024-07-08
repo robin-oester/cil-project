@@ -35,10 +35,10 @@ class SVDPP(AbstractModel):
         self.lam3 = hyperparameters["lam3"]
 
         # Calculated using heuristics as soon as data is available
-        self.mu = torch.tensor(0.0)
-        self.bu = torch.zeros(NUM_USERS, requires_grad=False)
-        self.bi = torch.zeros(NUM_MOVIES, requires_grad=False)
-        self.y = torch.zeros(NUM_USERS, self.nr_factors, requires_grad=False)
+        self.mu = nn.Parameter(torch.tensor(0.0).float(), requires_grad=False)
+        self.bu = nn.Parameter(torch.zeros(NUM_USERS).float(), requires_grad=False)
+        self.bi = nn.Parameter(torch.zeros(NUM_MOVIES).float(), requires_grad=False)
+        self.y = nn.Parameter(torch.zeros(NUM_USERS, self.nr_factors).float(), requires_grad=False)
 
         self.init_mean = 0.0
         self.init_std = 0.005
@@ -96,10 +96,10 @@ class SVDPP(AbstractModel):
                 y[u, :] += v[i, :]
             y[u, :] /= (self.lam3 + len(rated_items_indices)) * np.sqrt(len(rated_items_indices))
 
-        self.mu = torch.tensor(mu).float()
-        self.bu = torch.from_numpy(bu).float()
-        self.bi = torch.from_numpy(bi).float()
-        self.y = torch.from_numpy(y).float()
+        self.mu = nn.Parameter(torch.tensor(mu).float(), requires_grad=False)
+        self.bu = nn.Parameter(torch.from_numpy(bu).float(), requires_grad=False)
+        self.bi = nn.Parameter(torch.from_numpy(bi).float(), requires_grad=False)
+        self.y = nn.Parameter(torch.from_numpy(y).float(), requires_grad=False)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         u = inputs[:, 0].long()

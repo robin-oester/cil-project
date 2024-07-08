@@ -8,8 +8,8 @@ if __name__ == "__main__":
 
     # Example usage
     model = SVDPP.load_from_checkpoint(
-        "/Users/pieroneri/Desktop/cil-project/cil_project/\
-            svd_plusplus/trainer/checkpoints/SVDPP_5_2024-07-03_16:10:09.pkl"
+        "/Users/pieroneri/Desktop/cil-project/cil_project/svd_plusplus/"
+        "trainer/checkpoints/SVDPP_5_2024-07-08_21:39:06.pkl"
     )
     dataset = RatingsDataset.load(FULL_SERIALIZED_DATASET_NAME)
 

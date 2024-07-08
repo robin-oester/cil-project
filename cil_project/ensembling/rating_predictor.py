@@ -42,7 +42,7 @@ class RatingPredictor(ABC):
         """
 
         input_path = DATA_PATH / input_file_name
-        submission_dataset = SubmissionDataset(input_path)
+        submission_dataset = SubmissionDataset.from_file(input_path)
         predictions = self.predict(submission_dataset.inputs)
 
         assert predictions.shape[0] == submission_dataset.inputs.shape[0]

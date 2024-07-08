@@ -1,14 +1,13 @@
 import logging
-import os
-import csv
 
 import numpy as np
 import torch
 from cil_project.dataset import BalancedKFold, BalancedSplit, RatingsDataset, SubmissionDataset
+from cil_project.ensembling.utils import write_predictions_to_csv
 from cil_project.svd_plusplus.evaluators import SVDPPEvaluator
 from cil_project.svd_plusplus.model import SVDPP
 from cil_project.svd_plusplus.trainer import SVDPPTrainer
-from cil_project.utils import FULL_SERIALIZED_DATASET_NAME, DATA_PATH, SUBMISSION_FILE_NAME
+from cil_project.utils import FULL_SERIALIZED_DATASET_NAME, SUBMISSION_FILE_NAME
 from torch import optim
 from torch.optim import Adam
 
@@ -35,26 +34,6 @@ LAM = 0.03
 LAM1 = 10.0
 LAM2 = 25.0
 LAM3 = 10.0
-
-
-def store_to_csv(inputs: np.ndarray, predictions: np.ndarray, file_name: str) -> None:
-    """
-    Store the predictions to a csv file.
-
-    :param inputs: The inputs for which the predictions were made. Expected shape (N, 2).
-    :param predictions: The predictions. Expected shape (N,1).
-    :param file_name: The file name of the csv file.
-    """
-    file_path = DATA_PATH / f"{file_name}.csv"
-    
-    with open(file_path, 'w', newline='') as file:
-        writer = csv.writer(file)
-        
-        writer.writerow(["Id", "Prediction"])
-        
-        for i in range(inputs.shape[0]):
-            row_id = f"r{inputs[i, 0]+1}_c{inputs[i, 1]+1}"
-            writer.writerow([row_id, predictions[i, 0]])
 
 
 class SVDPPTrainingProcedure:
@@ -84,7 +63,7 @@ class SVDPPTrainingProcedure:
 
         try:
             self.trainer.train(train_dataset, test_dataset, NUM_EPOCHS)
-            # self.trainer.train(self.dataset, None, NUM_EPOCHS) # train on whole dataset
+            # self.trainer.train(self.dataset, None, NUM_EPOCHS)  # train on whole dataset
         except KeyboardInterrupt:
             logger.info("Training interrupted by the user.")
 
@@ -115,8 +94,8 @@ class SVDPPTrainingProcedure:
 
         avg_rmse /= num_folds
         logger.info(f"Average RMSE over {num_folds} folds: {avg_rmse}")
-    
 
+    # pylint: disable=too-many-locals
     def generate_data_for_stacking(self) -> None:
         np.random.seed(0)
         torch.manual_seed(0)
@@ -133,11 +112,14 @@ class SVDPPTrainingProcedure:
             train_dataset = RatingsDataset.load(f"stacking_train_{fold}")
             val_dataset = RatingsDataset.load(f"stacking_val_{fold}")
 
+            # generate predictions for the validation fold
             try:
                 self.trainer.train(train_dataset, val_dataset, NUM_EPOCHS)
                 evaluator = SVDPPEvaluator(model, 64, train_dataset, None)
-                preds = evaluator.predict(val_dataset.get_inputs())
-                store_to_csv(val_dataset.get_inputs(), preds, f"{evaluator.get_name()}_{fold}")
+                inpts = val_dataset.get_inputs()
+                preds = evaluator.predict(inpts)
+                fold_dataset = SubmissionDataset(inpts, preds)
+                write_predictions_to_csv(fold_dataset, evaluator.get_name(), fold)
                 avg_rmse += self.trainer.validation_loss
 
             except KeyboardInterrupt:
@@ -145,6 +127,8 @@ class SVDPPTrainingProcedure:
 
         avg_rmse /= num_folds
         logger.info(f"Average RMSE over {num_folds} folds: {avg_rmse}")
+
+        # generate predictions for the test set
         try:
             # initialize the trainer
             model = SVDPP(self.hyperparameters)
@@ -154,9 +138,47 @@ class SVDPPTrainingProcedure:
 
             self.trainer.train(self.dataset, None, NUM_EPOCHS)
             evaluator = SVDPPEvaluator(model, 64, self.dataset, None)
-            inpts = SubmissionDataset(DATA_PATH / SUBMISSION_FILE_NAME).inputs
+            evaluator.generate_predictions(SUBMISSION_FILE_NAME)
+
+        except KeyboardInterrupt:
+            logger.info("Training interrupted by the user.")
+
+    # pylint: disable=too-many-locals
+    def generate_data_for_blending(self) -> None:
+        np.random.seed(0)
+        torch.manual_seed(0)
+        train_dataset = RatingsDataset.load("blending_train")
+        val_dataset = RatingsDataset.load("blending_val")
+
+        # initialize the trainer
+        model = SVDPP(self.hyperparameters)
+        optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=DECAY)
+        self.trainer = SVDPPTrainer(model, self.batch_size, optimizer, scheduler)
+
+        # generate predictions for the validation set
+        try:
+            self.trainer.train(train_dataset, val_dataset, NUM_EPOCHS)
+            evaluator = SVDPPEvaluator(model, 64, train_dataset, None)
+            inpts = val_dataset.get_inputs()
             preds = evaluator.predict(inpts)
-            store_to_csv(inpts, preds, f"{evaluator.get_name()}")
+            fold_dataset = SubmissionDataset(inpts, preds)
+            write_predictions_to_csv(fold_dataset, evaluator.get_name(), 0)
+
+        except KeyboardInterrupt:
+            logger.info("Training interrupted by the user.")
+
+        # initialize the trainer
+        model = SVDPP(self.hyperparameters)
+        optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=DECAY)
+        self.trainer = SVDPPTrainer(model, self.batch_size, optimizer, scheduler)
+
+        # generate predictions for the test set
+        try:
+            self.trainer.train(self.dataset, None, NUM_EPOCHS)
+            evaluator = SVDPPEvaluator(model, 64, self.dataset, None)
+            evaluator.generate_predictions(SUBMISSION_FILE_NAME)
 
         except KeyboardInterrupt:
             logger.info("Training interrupted by the user.")
@@ -177,9 +199,10 @@ def main() -> None:
 
     dataset = RatingsDataset.load(dataset_name)
     training_procedure = SVDPPTrainingProcedure(hyperparameters, batch_size, dataset)
-    training_procedure.generate_data_for_stacking()
     # training_procedure.start_training()
     # training_procedure.start_kfold_training()
+    training_procedure.generate_data_for_stacking()
+    # training_procedure.generate_data_for_blending()
 
 
 if __name__ == "__main__":
