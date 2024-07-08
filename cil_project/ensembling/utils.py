@@ -6,7 +6,9 @@ from cil_project.dataset import SubmissionDataset
 from cil_project.utils import DATA_PATH
 
 
-def write_predictions_to_csv(submission_dataset: SubmissionDataset, model_name: str, fold_idx: Optional[int] = None) -> pathlib.Path:
+def write_predictions_to_csv(
+    submission_dataset: SubmissionDataset, model_name: str, fold_idx: Optional[int] = None
+) -> pathlib.Path:
     """
     Write the predictions to a csv file. The predictions are aggregated in the submission dataset.
     Stores them as <model_name>_<fold_idx>.csv if fold_idx is not None, otherwise as <model_name>.csv.
