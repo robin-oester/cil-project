@@ -11,9 +11,6 @@ class SVT(Baseline, RatingPredictor):
         self.u: np.ndarray = np.array([])
         self.v: np.ndarray = np.array([])
         self.verbose = verbose
-        self.test_m = np.array([])
-        self.test_m_mask = np.array([])
-        self.rmse = 0.0
         # Define hyperparameters dictionary
         self.hyperparameters = {"max_iter": max_iter, "eta": eta, "tau": tau}
 

@@ -1,6 +1,3 @@
-import pathlib
-import pickle
-import time
 from typing import Any
 
 import numpy as np
@@ -12,6 +9,9 @@ class Baseline:
         self.reconstructed_matrix: np.ndarray = np.array([])
         self.column_mean: np.ndarray = np.array([])
         self.column_std: np.ndarray = np.array([])
+        self.test_m = np.array([])
+        self.test_m_mask = np.array([])
+        self.rmse = 0.0
 
     def normalize_data_matrix(self, d_matrix: np.ndarray) -> np.ndarray:
         """
@@ -32,22 +32,3 @@ class Baseline:
         """
         self.reconstructed_matrix = self.reconstructed_matrix * self.column_std + self.column_mean
         self.reconstructed_matrix = np.clip(self.reconstructed_matrix, 1, 5)
-
-    def save_model_attributes(self) -> None:
-        folder_path = pathlib.Path(pathlib.Path(__file__).parent) / "predictor_attributes"
-        name = self.__class__.__name__
-        folder_path.mkdir(exist_ok=True)
-        millis = int(time.time())
-        hyperparameters_str = "-".join([f"{key}{value}" for key, value in self.hyperparameters.items()])
-        file_name = f"{name}-{millis}-{hyperparameters_str}.pkl"
-        file_path = folder_path / file_name
-        with open(file_path, "wb") as file:
-            pickle.dump(self, file)
-        print(f"Model saved to {file_path}")
-
-    @staticmethod
-    def load_model_attributes(file_path: pathlib.Path) -> None:
-        """Loads and returns a model instance from a file."""
-        with open(file_path, "rb") as file:
-            model = pickle.load(file)
-        return model

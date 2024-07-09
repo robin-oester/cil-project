@@ -11,8 +11,6 @@ class ALS(Baseline, RatingPredictor):
         self.u: np.ndarray = np.array([])
         self.v: np.ndarray = np.array([])
         self.verbose = verbose
-        self.test_m = np.array([])
-        self.test_m_mask = np.array([])
         # hyperparameters
         self.hyperparameters = {
             "k": k,
@@ -53,7 +51,9 @@ class ALS(Baseline, RatingPredictor):
             self.reconstructed_matrix = np.dot(u, v)  # reconstruct the matrix to calculate RMSE
             if self.verbose and not (self.test_m.size == 0 and self.test_m_mask.size == 0):
                 r = np.clip(self.reconstructed_matrix.copy() * self.column_std + self.column_mean, 1, 5)
-                print(f"Iteration {it+1}, Validation RMSE: {masked_rmse(self.test_m, r, self.test_m_mask)}")
+                rmse = masked_rmse(self.test_m, r, self.test_m_mask)
+                self.rmse = rmse
+                print(f"Iteration {it+1}, Validation RMSE: {rmse}")
 
         self.u, self.v = u, v
         self.reconstructed_matrix = np.dot(u, v)
