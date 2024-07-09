@@ -1,8 +1,8 @@
 import argparse
 import logging
 
-from cil_project.dataset import RatingsDataset, TargetNormalization
-from cil_project.neural_filtering.models.autoencoder import Autoencoder
+from cil_project.dataset import BalancedSplit, RatingsDataset, TargetNormalization
+from cil_project.neural_filtering.models import Autoencoder
 from cil_project.neural_filtering.trainers import ReconstructionTrainer
 from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
 from torch import optim
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 This script is used to train the autoencoder with the specified encoding size, dropout probability and batch size.
 Typical usage:
 
-./autoencoder_training_procedure.py --encoding_size <encoding_size> --dropout <probability> --batch_size <batch_size>
+./autoencoder_procedure.py --encoding_size <encoding_size> --dropout <probability> --batch_size <batch_size>
 """
 
 # learning constants
@@ -28,7 +28,7 @@ NUM_EPOCHS = 500
 WEIGHT_DECAY = 1e-4
 
 
-class AutoencoderTrainingProcedure:
+class AutoencoderProcedure:
     """
     Class used to train the autoencoder.
     """
@@ -49,20 +49,20 @@ class AutoencoderTrainingProcedure:
         dataset = RatingsDataset.load(FULL_SERIALIZED_DATASET_NAME)
 
         # uncomment for testing/hyperparameter tuning
-        # splitter = BalancedSplit(0.95, True)
+        splitter = BalancedSplit(0.95, True)
 
-        # train_idx, test_idx = splitter.split(dataset)
+        train_idx, test_idx = splitter.split(dataset)
 
-        # train_dataset = dataset.get_split(train_idx)
-        # test_dataset = dataset.get_split(test_idx)
+        train_dataset = dataset.get_split(train_idx)
+        test_dataset = dataset.get_split(test_idx)
 
         # optionally, normalize the training dataset
-        dataset.normalize(TargetNormalization.BY_MOVIE)
-        # train_dataset.normalize(TargetNormalization.BY_MOVIE)
+        # dataset.normalize(TargetNormalization.BY_MOVIE)
+        train_dataset.normalize(TargetNormalization.BY_MOVIE)
 
         try:
-            trainer.train(dataset, None, num_epochs)
-            # trainer.train(train_dataset, test_dataset, num_epochs)
+            # trainer.train(dataset, None, num_epochs)
+            trainer.train(train_dataset, test_dataset, num_epochs)
         except KeyboardInterrupt:
             logger.info("Training interrupted by the user.")
 
@@ -104,7 +104,7 @@ def main() -> None:
         f"dropout probability {p_dropout} and batch size {batch_size}."
     )
 
-    training_procedure = AutoencoderTrainingProcedure(encoding_size, p_dropout, batch_size)
+    training_procedure = AutoencoderProcedure(encoding_size, p_dropout, batch_size)
     training_procedure.start_training(NUM_EPOCHS)
 
 

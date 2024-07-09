@@ -3,8 +3,8 @@ import logging
 from typing import Optional
 
 import torch
-from cil_project.dataset import RatingsDataset
-from cil_project.neural_filtering.models import NCFBaseline
+from cil_project.dataset import RatingsDataset, TargetNormalization
+from cil_project.neural_filtering.models import NCFCombined
 from cil_project.neural_filtering.trainers import RatingTrainer
 from cil_project.utils import CHECKPOINT_PATH, FULL_SERIALIZED_DATASET_NAME
 from torch.optim import SGD
@@ -21,17 +21,19 @@ This script is used to train the NCF model with the specified predictive factor 
 It also takes the pretrained model names (as found in checkpoints) for GMF and MLP.
 Typical usage:
 
-./ncf_training_procedure.py --predictive_factor <predictive_factor> --batch_size <batch_size>
-                            --gmf <gmf_name> --mlp <mlp_name> [--dataset <dataset>] [--val_dataset <dataset>]
+./ncf_combined_training_procedure.py --predictive_factor <predictive_factor> --batch_size <batch_size>
+                                     --gmf <gmf_name> --mlp <mlp_name> [--dataset <dataset>] [--val_dataset <dataset>]
 """
 
 # learning constants
+NUM_EPOCHS = 40
+
 ALPHA = 0.5
-LEARNING_RATE = 0.01
-NUM_EPOCHS = 100
+LR = 0.001
+DECAY = 2e-3
 
 
-class NCFTrainingProcedure:
+class NCFCombinedTrainingProcedure:
     """
     Procedure used to train the NCF model.
     """
@@ -58,18 +60,18 @@ class NCFTrainingProcedure:
         val_dataset: Optional[RatingsDataset],
         num_epochs: int,
     ) -> None:
-        model = NCFBaseline(self.hyperparameters)
+        model = NCFCombined(self.hyperparameters)
 
         # load pretrained models and initialize weights of full model
-        loaded_dict: dict = torch.load(CHECKPOINT_PATH / gmf_name)["model"]
-        loaded_dict.update(torch.load(CHECKPOINT_PATH / mlp_name)["model"])
-        model.load_state_dict(loaded_dict)
+        model.gmf.load_state_dict(torch.load(CHECKPOINT_PATH / gmf_name)["model"])
+        model.mlp.load_state_dict(torch.load(CHECKPOINT_PATH / mlp_name)["model"])
 
-        optimizer = SGD(model.parameters(), lr=LEARNING_RATE)
+        optimizer = SGD(model.parameters(), lr=LR, weight_decay=DECAY)
+
         trainer = RatingTrainer(model, self.batch_size, optimizer)
 
         # optionally, normalize the training dataset
-        # dataset.normalize(TargetNormalization.TO_TANH_RANGE)
+        dataset.normalize(TargetNormalization.BY_MOVIE)
 
         try:
             trainer.train(dataset, val_dataset, num_epochs)
@@ -93,7 +95,7 @@ def main() -> None:
     parser.add_argument(
         "--batch_size",
         type=int,
-        choices=[64, 128, 256, 512],
+        choices=[64, 128, 256, 512, 1024, 2048],
         required=True,
         help="The batch size used for training. Must be one of 64, 128, 256, 512.",
     )
@@ -140,7 +142,7 @@ def main() -> None:
     if val_dataset_name is not None:
         val_dataset = RatingsDataset.load(val_dataset_name)
 
-    training_procedure = NCFTrainingProcedure(predictive_factor, batch_size)
+    training_procedure = NCFCombinedTrainingProcedure(predictive_factor, batch_size)
     training_procedure.start_training(gmf_name, mlp_name, dataset, val_dataset, NUM_EPOCHS)
 
 

@@ -2,9 +2,10 @@ import argparse
 import logging
 
 from cil_project.dataset import BalancedSplit, RatingsDataset, TargetNormalization
-from cil_project.neural_filtering.models import KANNCF
+from cil_project.neural_filtering.models import NCF
 from cil_project.neural_filtering.trainers import RatingTrainer
 from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
+from torch import optim
 from torch.optim import Adam
 
 logging.basicConfig(
@@ -15,21 +16,22 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 """
-This script is used to train the KAN-based NCF with the specified embedding size, hidden dimension and batch size.
+This script is used to train the MLP-based NCF with the specified embedding size, hidden dimension and batch size.
 Typical usage:
 
-./kan_ncf_procedure --embedding <embedding_dim> --hidden <hidden_dim> --batch_size <batch_size>
+./ncf_procedure --embedding <embedding_dim> --hidden <hidden_dim> --batch_size <batch_size>
 """
 
 # learning constants
-LEARNING_RATE = 0.001
+LEARNING_RATE = 1e-3
 NUM_EPOCHS = 100
 WEIGHT_DECAY = 1e-4
+GAMMA = 0.97
 
 
-class KANNCFProcedure:
+class NCFProcedure:
     """
-    Class used to perform training of the KAN-based NCF model.
+    Class used to perform pretraining of the NCF components.
     """
 
     def __init__(self, embedding_dim: int, hidden_dim: int, batch_size: int) -> None:
@@ -45,12 +47,13 @@ class KANNCFProcedure:
         self.hyperparameters = {"embedding_dim": embedding_dim, "hidden_dim": hidden_dim}
 
     def start_training(self, num_epochs: int) -> None:
-        model = KANNCF(self.hyperparameters)
+        model = NCF(self.hyperparameters)
+
+        optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=GAMMA)
 
         # initialize the trainer
-        optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-
-        trainer = RatingTrainer(model, self.batch_size, optimizer)
+        trainer = RatingTrainer(model, self.batch_size, optimizer, scheduler)
 
         dataset = RatingsDataset.load(FULL_SERIALIZED_DATASET_NAME)
         splitter = BalancedSplit(0.95, True)
@@ -60,8 +63,8 @@ class KANNCFProcedure:
         train_dataset = dataset.get_split(train_idx)
         test_dataset = dataset.get_split(test_idx)
 
-        # optionally, normalize the training dataset
-        train_dataset.normalize(TargetNormalization.TO_TANH_RANGE)
+        # normalize the training dataset
+        train_dataset.normalize(TargetNormalization.BY_MOVIE)
 
         try:
             trainer.train(train_dataset, test_dataset, num_epochs)
@@ -70,7 +73,7 @@ class KANNCFProcedure:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Train KAN-based NCF with the specified parameters.")
+    parser = argparse.ArgumentParser(description="Train the improved NCF version with the specified parameters.")
 
     parser.add_argument(
         "--embedding",
@@ -83,7 +86,7 @@ def main() -> None:
     parser.add_argument(
         "--hidden",
         type=int,
-        choices=[8, 16, 32, 64, 128, 256],
+        choices=[8, 16, 32, 64, 128, 256, 384, 512],
         required=True,
         help="The hidden dimension of the model. Must be one of 8, 16, 32, 64, 128, 256.",
     )
@@ -91,7 +94,6 @@ def main() -> None:
     parser.add_argument(
         "--batch_size",
         type=int,
-        choices=[64, 128, 256, 512],
         required=True,
         help="The batch size used for training. Must be one of 64, 128, 256, 512.",
     )
@@ -103,11 +105,11 @@ def main() -> None:
     batch_size: int = args.batch_size
 
     logger.info(
-        f"Initialized the procedure for training KAN-based NCF with embedding dimension {embedding_dim}, hidden "
+        f"Initialized the procedure for training MLP-based NCF with embedding dimension {embedding_dim}, hidden "
         f"dimension {hidden_dim} and batch size {batch_size}."
     )
 
-    training_procedure = KANNCFProcedure(embedding_dim, hidden_dim, batch_size)
+    training_procedure = NCFProcedure(embedding_dim, hidden_dim, batch_size)
     training_procedure.start_training(NUM_EPOCHS)
 
 
