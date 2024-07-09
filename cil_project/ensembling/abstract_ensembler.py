@@ -38,7 +38,7 @@ class AbstractEnsembler(ABC):
         for path in paths:
             assert path.is_file(), f"No file found at {path}."
 
-            submission = SubmissionDataset(path, set_values_to_zero=False)
+            submission = SubmissionDataset.from_file(path, set_values_to_zero=False)
 
             assert np.array_equal(inputs, submission.inputs), "Inputs for predictions do not match."
             assert inputs.shape[0] == submission.predictions.shape[0], "Prediction lengths do not match."
