@@ -97,7 +97,7 @@ def run_ensembler() -> None:
         logger.info(f"Perform averaging of {model_names}.")
         ensembler = AvgEnsembler(model_names)
 
-    submission = SubmissionDataset(DATA_PATH / SUBMISSION_FILE_NAME)
+    submission = SubmissionDataset.from_file(DATA_PATH / SUBMISSION_FILE_NAME)
     final_path = ensembler.predict(submission)
 
     logger.info(f"Stored final predictions to '{final_path.name}'.")
