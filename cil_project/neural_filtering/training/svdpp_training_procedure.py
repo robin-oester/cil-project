@@ -4,9 +4,9 @@ import numpy as np
 import torch
 from cil_project.dataset import BalancedKFold, BalancedSplit, RatingsDataset, SubmissionDataset
 from cil_project.ensembling.utils import write_predictions_to_csv
-from cil_project.svd_plusplus.evaluators import SVDPPEvaluator
-from cil_project.svd_plusplus.model import SVDPP
-from cil_project.svd_plusplus.trainer import SVDPPTrainer
+from cil_project.neural_filtering.evaluators import RatingEvaluator
+from cil_project.neural_filtering.models import SVDPP
+from cil_project.neural_filtering.trainers import SVDPPTrainer
 from cil_project.utils import FULL_SERIALIZED_DATASET_NAME, SUBMISSION_FILE_NAME
 from torch import optim
 from torch.optim import Adam
@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 """
 This script is used to train svdpp.
-Typical usage: python3 cil_project/../svdpp_training_procedure.py
+Typical usage:
+
+./svdpp_training_procedure.py
 """
 
 # hyperparameters
@@ -115,7 +117,7 @@ class SVDPPTrainingProcedure:
             # generate predictions for the validation fold
             try:
                 self.trainer.train(train_dataset, val_dataset, NUM_EPOCHS)
-                evaluator = SVDPPEvaluator(model, 64, train_dataset, None)
+                evaluator = RatingEvaluator(model, 64, train_dataset, None)
                 inpts = val_dataset.get_inputs()
                 preds = evaluator.predict(inpts)
                 fold_dataset = SubmissionDataset(inpts, preds)
@@ -137,7 +139,7 @@ class SVDPPTrainingProcedure:
             self.trainer = SVDPPTrainer(model, self.batch_size, optimizer, scheduler)
 
             self.trainer.train(self.dataset, None, NUM_EPOCHS)
-            evaluator = SVDPPEvaluator(model, 64, self.dataset, None)
+            evaluator = RatingEvaluator(model, 64, self.dataset, None)
             evaluator.generate_predictions(SUBMISSION_FILE_NAME)
 
         except KeyboardInterrupt:
@@ -159,7 +161,7 @@ class SVDPPTrainingProcedure:
         # generate predictions for the validation set
         try:
             self.trainer.train(train_dataset, val_dataset, NUM_EPOCHS)
-            evaluator = SVDPPEvaluator(model, 64, train_dataset, None)
+            evaluator = RatingEvaluator(model, 64, train_dataset, None)
             inpts = val_dataset.get_inputs()
             preds = evaluator.predict(inpts)
             fold_dataset = SubmissionDataset(inpts, preds)
@@ -177,7 +179,7 @@ class SVDPPTrainingProcedure:
         # generate predictions for the test set
         try:
             self.trainer.train(self.dataset, None, NUM_EPOCHS)
-            evaluator = SVDPPEvaluator(model, 64, self.dataset, None)
+            evaluator = RatingEvaluator(model, 64, self.dataset, None)
             evaluator.generate_predictions(SUBMISSION_FILE_NAME)
 
         except KeyboardInterrupt:

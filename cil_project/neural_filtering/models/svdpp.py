@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import numpy as np
@@ -6,6 +7,8 @@ from cil_project.utils import NUM_MOVIES, NUM_USERS, ModelInitializationError, v
 from torch import nn
 
 from .abstract_model import AbstractModel
+
+logger = logging.getLogger(__name__)
 
 
 class SVDPP(AbstractModel):
@@ -56,12 +59,16 @@ class SVDPP(AbstractModel):
 
     # Article: New Collaborative Filtering Algorithms Based on SVD++ and Differential Privacy
     # https://doi.org/10.1155/2017/1975719
-    # pylint: disable=too-many-locals, attribute-defined-outside-init
+    # pylint: disable=too-many-locals
     def compute_mu_bu_bi_y(self, data_matrix: np.ndarray, data_matrix_mask: np.ndarray) -> None:
         """
         Compute global mean (mu), user bias (bu), item bias (bi) and implicit feedback (y) for the SVD++ model.
+
+        :param data_matrix: The data matrix from which the statistics are computed.
+        :param data_matrix_mask: The corresponding mask to only select appropriate values.
         """
-        print("Calculating mu, bu, bi, and y...")
+
+        logger.debug("Calculating mu, bu, bi, and y...")
         # Compute the global mean (mu)
         data_matrix_mask = data_matrix_mask.astype(bool)
         mu = np.mean(data_matrix[data_matrix_mask])
@@ -96,10 +103,10 @@ class SVDPP(AbstractModel):
                 y[u, :] += v[i, :]
             y[u, :] /= (self.lam3 + len(rated_items_indices)) * np.sqrt(len(rated_items_indices))
 
-        self.mu = nn.Parameter(torch.tensor(mu).float(), requires_grad=False)
-        self.bu = nn.Parameter(torch.from_numpy(bu).float(), requires_grad=False)
-        self.bi = nn.Parameter(torch.from_numpy(bi).float(), requires_grad=False)
-        self.y = nn.Parameter(torch.from_numpy(y).float(), requires_grad=False)
+        self.mu.data = torch.tensor(mu).float()
+        self.bu.data = torch.from_numpy(bu).float()
+        self.bi.data = torch.from_numpy(bi).float()
+        self.y.data = torch.from_numpy(y).float()
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         u = inputs[:, 0].long()
@@ -115,5 +122,4 @@ class SVDPP(AbstractModel):
 
         pred = self.mu + bu + bi + dot_product
 
-        pred = pred.unsqueeze(1)
-        return pred
+        return pred.unsqueeze(1)

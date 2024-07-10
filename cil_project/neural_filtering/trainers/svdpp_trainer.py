@@ -3,14 +3,13 @@ from typing import Optional
 
 import torch
 from cil_project.dataset import RatingsDataset
-from cil_project.svd_plusplus.evaluators import AbstractEvaluator, SVDPPEvaluator
-from cil_project.svd_plusplus.model import AbstractModel
+from cil_project.neural_filtering.evaluators import AbstractEvaluator, RatingEvaluator
+from cil_project.neural_filtering.models import SVDPP
+from cil_project.neural_filtering.trainers import AbstractTrainer
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-
-from .abstract_trainer import AbstractTrainer
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class SVDPPTrainer(AbstractTrainer):
 
     def __init__(
         self,
-        model: AbstractModel,
+        model: SVDPP,
         batch_size: int,
         optimizer: Optimizer,
         scheduler: Optional[LRScheduler] = None,
@@ -36,7 +35,6 @@ class SVDPPTrainer(AbstractTrainer):
 
     # pylint: disable=too-many-locals
     def train(self, dataset: RatingsDataset, val_dataset: Optional[RatingsDataset], num_epochs: int) -> None:
-
         # Initialize mu, bu, bi, and y
         self.model.compute_mu_bu_bi_y(dataset.get_data_matrix(), dataset.get_data_matrix_mask())
 
@@ -45,7 +43,7 @@ class SVDPPTrainer(AbstractTrainer):
 
         evaluator: Optional[AbstractEvaluator] = None
         if val_dataset is not None:
-            evaluator = SVDPPEvaluator(self.model, self.batch_size, dataset, val_dataset, self.device)
+            evaluator = RatingEvaluator(self.model, self.batch_size, dataset, val_dataset, self.device)
 
         target_epoch = self.current_epoch + num_epochs
         model_class_name = self.model.__class__.__name__
@@ -97,4 +95,6 @@ class SVDPPTrainer(AbstractTrainer):
                 self.scheduler.step()
             self.current_epoch += 1
 
-        logger.info(f"Finished training of model {model_class_name}.")
+        logger.info(
+            f"Finished training of model {model_class_name} with best validation loss {self.best_val_loss:.4f}."
+        )

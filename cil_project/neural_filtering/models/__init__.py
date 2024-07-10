@@ -7,6 +7,7 @@ from .ncf_combined import NCFCombined  # noqa: F401
 from .ncf_combined import NCFGMFModel  # noqa: F401
 from .ncf_combined import NCFMLPModel  # noqa: F401
 from .ncf_kan import KANNCF  # noqa: F401
+from .svdpp import SVDPP  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")
