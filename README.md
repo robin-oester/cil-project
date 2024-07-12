@@ -39,12 +39,17 @@ In order to keep the project organized, we propose the following workflow for co
 - ```data/data_train.csv``` holds the training data with (Id,Prediction) tuples. The Id consists of a given (user, movie) rating. For example r44_c1 refers to the rating of the 44-th user for the 1st movie. The movie ratings are integer values ranging from 1-5.
 - ```data/sampleSubmission.csv``` is a sample submission file. It holds the Ids, for which the predictions have to be made.
 
-## ▶️Run Experiments
+## ▶️ Run Experiments
 
 Here, you can find all scripts used to reproduce the results of our different methods. Depending on your system, you might need to replace forward slashes "/" with backward slashes "\".
 
 ### Neural Collaborative Filtering (MLP-based)
-```python cil_project\neural_filtering\training\ncf_procedure.py --embedding 128 --hidden 384 --batch_size 512```
+
+### Neural Collaborative Filtering (KAN-based)
+
+### Neural Collaborative Filtering (combined)
+
+### Autoencoder
 
 ## 📊 Results
 <div style="text-align: center;">

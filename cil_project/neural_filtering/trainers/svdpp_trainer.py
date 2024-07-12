@@ -1,19 +1,14 @@
 import logging
+import pathlib
 from typing import Optional
 
 import torch
 from cil_project.dataset import RatingsDataset
-from cil_project.neural_filtering.evaluators import AbstractEvaluator, RatingEvaluator
-from cil_project.neural_filtering.models import SVDPP
 from cil_project.neural_filtering.trainers import AbstractTrainer
-from torch.optim import Optimizer
-from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
-
-CHECKPOINT_GRANULARITY = 5
 
 
 class SVDPPTrainer(AbstractTrainer):
@@ -21,32 +16,20 @@ class SVDPPTrainer(AbstractTrainer):
     Class used to train svdpp.
     """
 
-    def __init__(
-        self,
-        model: SVDPP,
-        batch_size: int,
-        optimizer: Optimizer,
-        scheduler: Optional[LRScheduler] = None,
-        device: Optional[str] = None,
-        verbose: bool = True,
-    ) -> None:
-        super().__init__(model, batch_size, optimizer, scheduler, device, verbose)
-        self.validation_loss: Optional[float] = 0.0
-
     # pylint: disable=too-many-locals
-    def train(self, dataset: RatingsDataset, val_dataset: Optional[RatingsDataset], num_epochs: int) -> None:
+    def train(
+        self, dataset: RatingsDataset, num_epochs: int, checkpoint_granularity: Optional[int] = None
+    ) -> Optional[float]:
         # Initialize mu, bu, bi, and y
         self.model.compute_mu_bu_bi_y(dataset.get_data_matrix(), dataset.get_data_matrix_mask())
 
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
         loss_func = torch.nn.MSELoss(reduction="none")
 
-        evaluator: Optional[AbstractEvaluator] = None
-        if val_dataset is not None:
-            evaluator = RatingEvaluator(self.model, self.batch_size, dataset, val_dataset, self.device)
-
         target_epoch = self.current_epoch + num_epochs
         model_class_name = self.model.__class__.__name__
+        last_val_loss: Optional[float] = None
+        last_checkpoint: Optional[pathlib.Path] = None
         logger.info(f"Starting training of model {model_class_name} in epoch {self.current_epoch+1}/{target_epoch}.")
 
         while self.current_epoch < target_epoch:
@@ -81,20 +64,23 @@ class SVDPPTrainer(AbstractTrainer):
                     epoch_loss += total_loss.item()
 
             avg_train_loss = epoch_loss / len(dataloader)
-            if (self.current_epoch + 1) % CHECKPOINT_GRANULARITY == 0:
-                self.save_state()
 
-            val_loss: Optional[float] = None
-            if evaluator is not None:
-                val_loss = evaluator.evaluate()
-                self.validation_loss = val_loss
+            if self.evaluator is not None and self.evaluator.val_dataset is not None:
+                last_val_loss = self.evaluator.evaluate()
 
-            self._log_epoch_information(target_epoch, avg_train_loss, val_loss)
+            self._log_epoch_information(target_epoch, avg_train_loss, last_val_loss)
+
+            if self.must_save_checkpoint(target_epoch, checkpoint_granularity):
+                last_checkpoint = self.save_state()
 
             if self.scheduler is not None:
                 self.scheduler.step()
             self.current_epoch += 1
 
-        logger.info(
-            f"Finished training of model {model_class_name} with best validation loss {self.best_val_loss:.4f}."
-        )
+        logger.info(f"Finished training of model {model_class_name} for {num_epochs} epochs.")
+        if last_val_loss is not None:
+            logger.info(f"Best validation loss: {self.best_val_loss:.4f}. Last validation loss: {last_val_loss:.4f}.")
+        if last_checkpoint is not None:
+            logger.info(f"Stored last checkpoint to '{last_checkpoint.name}'.")
+
+        return last_val_loss
