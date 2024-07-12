@@ -7,7 +7,7 @@ from .ratings_dataset import RatingsDataset
 
 class BalancedSplit:
     """
-    Class used to split a dataset into train and test set where each user is represented equally.
+    Class used to split a dataset into train and validation set where each user is represented equally.
     """
 
     def __init__(self, split_percentage: float, shuffle: bool) -> None:
@@ -27,8 +27,8 @@ class BalancedSplit:
         """
         Splits the given dataset.
 
-        :param dataset: dataset that is split into train and test set.
-        :return: pair of lists containing the indices for the train and test set.
+        :param dataset: dataset that is split into train and validation set.
+        :return: pair of lists containing the indices for the train and validation set.
         """
 
         # Organize indices by user id
@@ -38,13 +38,13 @@ class BalancedSplit:
             user_dict[inputs[0].item()].append(idx)
 
         train_indices = []
-        test_indices = []
+        val_indices = []
         for indices in user_dict.values():
             if self._shuffle:
                 np.random.shuffle(indices)  # shuffle indices for randomness
 
             num_train: int = int(len(indices) * self._split_percentage)
             train_indices.extend(indices[:num_train])
-            test_indices.extend(indices[num_train:])
+            val_indices.extend(indices[num_train:])
 
-        return train_indices, test_indices
+        return train_indices, val_indices

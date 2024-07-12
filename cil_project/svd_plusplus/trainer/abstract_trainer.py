@@ -1,14 +1,16 @@
 import logging
+import pathlib
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Optional
 
 import torch
 from cil_project.dataset import RatingsDataset
-from cil_project.neural_filtering.models import AbstractModel
-from cil_project.utils import CHECKPOINT_PATH
+from cil_project.svd_plusplus.model import AbstractModel
 from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LRScheduler
+
+CHECKPOINT_PATH = pathlib.Path(__file__).resolve().parent / "checkpoints"
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +39,6 @@ class AbstractTrainer(ABC):
         :param device: (optional) device on which to run training.
         :param verbose: whether to print training information.
         """
-
         self.model = model
         self.batch_size = batch_size
 
@@ -69,7 +70,7 @@ class AbstractTrainer(ABC):
             "best_val_loss": self.best_val_loss,
         }
 
-        current_timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        current_timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
         model_class_name = self.model.__class__.__name__
         epoch = self.current_epoch + 1

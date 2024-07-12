@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from cil_project.dataset import RatingsDataset
 from cil_project.ensembling import RatingPredictor
-from cil_project.neural_filtering.models import AbstractModel
+from cil_project.svd_plusplus.model import AbstractModel
 from cil_project.utils import MAX_RATING, MIN_RATING, rmse
 
 

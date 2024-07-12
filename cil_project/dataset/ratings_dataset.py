@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 import pandas as pd
 import torch
-from cil_project.utils import DATA_PATH, MAX_RATING, MIN_RATING, nanmean, nanstd
+from cil_project.utils import DATA_PATH, MAX_RATING, MIN_RATING, NUM_MOVIES, NUM_USERS, nanmean, nanstd
 from torch.utils.data import Dataset
 
 from .target_normalization import TargetNormalization
@@ -22,7 +22,7 @@ class RatingsDataset(Dataset):
     Dataset holding the ratings.
     """
 
-    def __init__(self, inputs: np.ndarray, targets: np.ndarray, num_users: int, num_movies: int) -> None:
+    def __init__(self, inputs: np.ndarray, targets: np.ndarray) -> None:
         """
         Initialize the dataset of N samples with inputs and targets.
         Inputs consists of N rows with users and movies. In targets, we can find
@@ -30,8 +30,6 @@ class RatingsDataset(Dataset):
 
         :param inputs: array of shape N x 2.
         :param targets: array of shape N x 1.
-        :param num_users: total number of users.
-        :param num_movies: total number of movies.
         """
 
         assert inputs.shape[1] == 2
@@ -41,17 +39,14 @@ class RatingsDataset(Dataset):
         self._inputs = inputs
         self._targets = targets
 
-        self._num_users = num_users
-        self._num_movies = num_movies
-
         # compute dataset statistics
         data_matrix = self.get_data_matrix(fill_value=np.nan)
 
         # get mean by user without considering nans
-        self._user_means = nanmean(data_matrix, axis=1).reshape(-1, 1)  # shape: (num_users, 1)
+        self._user_means = nanmean(data_matrix, axis=1).reshape(-1, 1)  # shape: (NUM_USERS, 1)
         self._user_stds = nanstd(data_matrix, axis=1).reshape(-1, 1)
 
-        self._movie_means = nanmean(data_matrix, axis=0).reshape(-1, 1)  # shape: (num_movies, 1)
+        self._movie_means = nanmean(data_matrix, axis=0).reshape(-1, 1)  # shape: (NUM_MOVIES, 1)
         self._movie_stds = nanstd(data_matrix, axis=0).reshape(-1, 1)
 
         self._target_mean = targets.mean().reshape(-1, 1)  # shape: (num_targets, 1)
@@ -65,19 +60,20 @@ class RatingsDataset(Dataset):
 
     def set_dataset_statistics(self, dataset: "RatingsDataset") -> None:
         """
-        Update the dataset statistics. This can, e.g., used by a test set to represent the values
+        Update the dataset statistics. This can, e.g., used by a validation set to represent the values
         of the training dataset.
 
         :param dataset: the dataset from which the statistics are taken.
         """
 
-        assert self._num_users == dataset._num_users, "User number doesn't match"
-        assert self._num_movies == dataset._num_movies, "Movie number doesn't match"
-
         self._user_means = dataset._user_means
         self._user_stds = dataset._user_stds
 
+        self._user_stds = dataset._user_stds
+
         self._movie_means = dataset._movie_means
+        self._movie_stds = dataset._movie_stds
+
         self._movie_stds = dataset._movie_stds
 
         self._target_mean = dataset._target_mean
@@ -102,6 +98,16 @@ class RatingsDataset(Dataset):
         ), f"Shapes of target and std do not match ({self._targets.shape} vs {std.shape}"
 
         self._targets = np.divide(self._targets - mean, std)
+        mean, std = self._get_normalization_statistics(normalization)
+
+        assert (
+            mean.shape == self._targets.shape
+        ), f"Shapes of target and mean do not match ({self._targets.shape} vs {mean.shape}"
+        assert (
+            std.shape == self._targets.shape
+        ), f"Shapes of target and std do not match ({self._targets.shape} vs {std.shape}"
+
+        self._targets = np.divide(self._targets - mean, std)
         self._normalization = normalization
 
     def denormalize(self) -> None:
@@ -109,6 +115,9 @@ class RatingsDataset(Dataset):
         Denormalizes the targets if they have been normalized.
         """
 
+        if self._normalization is not None:
+            mean, std = self._get_normalization_statistics(self._normalization)
+            self._targets = np.multiply(self._targets, std) + mean
         if self._normalization is not None:
             mean, std = self._get_normalization_statistics(self._normalization)
             self._targets = np.multiply(self._targets, std) + mean
@@ -168,6 +177,9 @@ class RatingsDataset(Dataset):
         elif self._normalization.value == TargetNormalization.BY_TARGET.value:
             mean.fill(self._target_mean)
             std.fill(self._target_std)
+        elif self._normalization.value == TargetNormalization.TO_UNIT_RANGE.value:
+            mean.fill(1.0)
+            std.fill(4.0)
         else:
             # this is TargetNormalization.TO_TANH_RANGE
             mean.fill(3.0)
@@ -176,14 +188,12 @@ class RatingsDataset(Dataset):
         return mean, std
 
     @classmethod
-    def from_file(cls, file_path: pathlib.Path, num_users: int = 10_000, num_movies: int = 1_000) -> "RatingsDataset":
+    def from_file(cls, file_path: pathlib.Path) -> "RatingsDataset":
         """
         Reads the data from a file. The file has a header and each line has the following format:
         r<user>_c<movie>,<rating>. The rating are floats/integers in [MIN_RATING, MAX_RATING].
 
         :param file_path: path to the data file.
-        :param num_users: total number of users.
-        :param num_movies: total number of movies.
         :return: the loaded dataset.
         """
 
@@ -212,7 +222,7 @@ class RatingsDataset(Dataset):
         logging.info(f"Loaded a total of {len(targets)} entries.")
 
         # reshape label to have dim (N, 1) not (N,)
-        return cls(np.array(inputs), np.array(targets, dtype=np.float32).reshape((-1, 1)), num_users, num_movies)
+        return cls(np.array(inputs), np.array(targets, dtype=np.float32).reshape((-1, 1)))
 
     def get_split(self, indices: list[int]) -> "RatingsDataset":
         """
@@ -225,7 +235,7 @@ class RatingsDataset(Dataset):
 
         split_inputs = self._inputs[indices]
         split_targets = self._targets[indices]
-        return RatingsDataset(split_inputs, split_targets, self._num_users, self._num_movies)
+        return RatingsDataset(split_inputs, split_targets)
 
     def store(self, name: str) -> None:
         """
@@ -237,13 +247,7 @@ class RatingsDataset(Dataset):
 
         assert not self.is_normalized(), "Dataset should be stored denormalized."
 
-        np.savez(
-            DATA_PATH / name,
-            inputs=self._inputs,
-            targets=self._targets,
-            num_users=np.array([self._num_users]),
-            num_movies=np.array([self._num_movies]),
-        )
+        np.savez(DATA_PATH / name, inputs=self._inputs, targets=self._targets)
 
     @staticmethod
     def load(name: str) -> "RatingsDataset":
@@ -260,10 +264,8 @@ class RatingsDataset(Dataset):
         data = np.load(path)
         inputs = data["inputs"]
         targets = data["targets"]
-        num_users = data["num_users"][0]
-        num_movies = data["num_movies"][0]
 
-        return RatingsDataset(inputs, targets, num_users, num_movies)
+        return RatingsDataset(inputs, targets)
 
     @staticmethod
     def get_available_dataset_names() -> list[str]:
@@ -290,9 +292,9 @@ class RatingsDataset(Dataset):
         """
 
         if fill_value is not None:
-            ratings = np.full((self._num_users, self._num_movies), fill_value, dtype=np.float32)
+            ratings = np.full((NUM_USERS, NUM_MOVIES), fill_value, dtype=np.float32)
         else:
-            ratings = np.zeros((self._num_users, self._num_movies), dtype=np.float32)
+            ratings = np.zeros((NUM_USERS, NUM_MOVIES), dtype=np.float32)
 
         for (user_id, movie_id), rating in zip(self._inputs, self._targets):
             ratings[user_id][movie_id] = rating
@@ -305,11 +307,29 @@ class RatingsDataset(Dataset):
         :return: the mask (of shape U x M for U users and M movies)
         """
 
-        ratings = np.zeros((self._num_users, self._num_movies), dtype=np.float32)
+        ratings = np.zeros((NUM_USERS, NUM_MOVIES), dtype=np.float32)
 
         for user_id, movie_id in self._inputs:
             ratings[user_id][movie_id] = 1
         return ratings
+
+    def get_num_ratings_per_user(self) -> np.ndarray:
+        """
+        Returns the number of ratings per user.
+
+        :return: the number of ratings per user as N x 1 array.
+        """
+
+        return np.bincount(self._inputs[:, 0], minlength=NUM_USERS).reshape(-1, 1)
+
+    def get_num_ratings_per_movie(self) -> np.ndarray:
+        """
+        Returns the number of ratings per movie.
+
+        :return: the number of ratings per movie as M x 1 array.
+        """
+
+        return np.bincount(self._inputs[:, 1], minlength=NUM_MOVIES).reshape(-1, 1)
 
     def __len__(self) -> int:
         return len(self._targets)

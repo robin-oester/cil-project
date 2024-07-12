@@ -16,12 +16,18 @@ class SubmissionDataset:
     Dataset holding the submission tuples (and possibly also predictions).
     """
 
-    def __init__(self, file_path: pathlib.Path, set_values_to_zero: bool = True) -> None:
+    def __init__(self, inputs: np.ndarray, predictions: np.ndarray):
+        self.inputs = inputs
+        self.predictions = predictions
+
+    @classmethod
+    def from_file(cls, file_path: pathlib.Path, set_values_to_zero: bool = True) -> "SubmissionDataset":
         """
         Load the submission dataset from the given file path.
 
         :param file_path: path to the submission file.
         :param set_values_to_zero: if the predictions should not be loaded.
+        :return: the submission dataset.
         """
 
         inputs: list[np.ndarray] = []
@@ -45,8 +51,9 @@ class SubmissionDataset:
                 predictions.append(rating)
 
         logging.info(f"Loaded a total of {len(predictions)} entries.")
-        self.inputs = np.array(inputs)  # shape: (N, 2)
-        self.predictions = np.array(predictions, dtype=np.float32).reshape((-1, 1))  # shape: (N, 1)
+        inputs = np.array(inputs)  # shape: (N, 2)
+        predictions = np.array(predictions, dtype=np.float32).reshape((-1, 1))  # shape: (N, 1)
+        return cls(np.array(inputs), np.array(predictions))
 
     def __len__(self) -> int:
         return len(self.predictions)
