@@ -21,7 +21,7 @@ def write_predictions_to_csv(
 
     # create csv file with predictions
     output_file_path = DATA_PATH / (f"{model_name}_{fold_idx}.csv" if fold_idx is not None else f"{model_name}.csv")
-    with open(output_file_path, "w", encoding="utf-8", newline='') as output_file:
+    with open(output_file_path, "w", encoding="utf-8", newline="") as output_file:
         writer = csv.writer(output_file)
         writer.writerow(["Id", "Prediction"])
         for (user_idx, movie_idx), prediction in zip(
