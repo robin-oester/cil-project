@@ -168,7 +168,7 @@ class AbstractTrainingProcedure(ABC):
 
         total_rmse = 0.0
         for i in range(k):
-            logger.info(f"Perform training for fold {i}.")
+            logger.info(f"Perform training for fold {i+1}/{k}.")
             train_dataset_name = f"{base_dataset_name}_{i}"
             val_dataset_name = f"{base_val_dataset_name}_{i}"
 
@@ -191,7 +191,7 @@ class AbstractTrainingProcedure(ABC):
 
             logger.info(f"Stored predictions for ensemble to '{ensemble_path.name}'.")
 
-        logger.info("Finished training of all folds.")
+        logger.info(f"Finished training of all {k} folds.")
         logger.info(f"Average RMSE: {(total_rmse / k):.4f}")
 
     def predict_submission(self) -> None:
@@ -241,7 +241,7 @@ class AbstractTrainingProcedure(ABC):
         # training mode
         parser.add_argument(
             "--train",
-            nargs="+",
+            nargs="*",
             metavar="DATASET",
             help="Run in training mode with specified train dataset and optional validation dataset",
         )
@@ -281,7 +281,7 @@ class AbstractTrainingProcedure(ABC):
             self.test_model(checkpoint_granularity)
 
         if args.train:
-            train_dataset_name = args.train[0]
+            train_dataset_name = args.train[0] if len(args.train) > 0 else FULL_SERIALIZED_DATASET_NAME
             validation_dataset_name = args.train[1] if len(args.train) > 1 else None
 
             checkpoint_granularity = args.checkpoint_granularity

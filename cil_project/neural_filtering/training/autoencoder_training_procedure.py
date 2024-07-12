@@ -45,7 +45,7 @@ class AutoencoderProcedure(AbstractTrainingProcedure):
 
         evaluator = ReconstructionEvaluator(model, BATCH_SIZE, train_dataset, val_dataset)
 
-        return ReconstructionTrainer(model, BATCH_SIZE, optimizer, scheduler, evaluator)
+        return ReconstructionTrainer(model, BATCH_SIZE, optimizer, scheduler, evaluator, verbose=False)
 
 
 if __name__ == "__main__":

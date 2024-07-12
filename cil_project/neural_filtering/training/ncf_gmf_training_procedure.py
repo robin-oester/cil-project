@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 # learning constants
-# NUM_EPOCHS = 10
-NUM_EPOCHS = 1
+NUM_EPOCHS = 10
 LEARNING_RATE = 1e-2
 WEIGHT_DECAY = 1e-5
 GAMMA = 0.85

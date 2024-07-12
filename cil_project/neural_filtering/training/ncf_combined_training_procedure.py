@@ -26,8 +26,8 @@ PREDICTIVE_FACTOR = 128
 BATCH_SIZE = 1024
 
 # Pretrained model checkpoints
-GMF_PRETRAINED_NAME = "gmf_128.pkl"
-MLP_PRETRAINED_NAME = "mlp_128.pkl"
+GMF_PRETRAINED_NAME = "NCFGMF_blending.pkl"
+MLP_PRETRAINED_NAME = "NCFMLP_blending.pkl"
 
 
 class NCFCombinedTrainingProcedure(AbstractTrainingProcedure):
