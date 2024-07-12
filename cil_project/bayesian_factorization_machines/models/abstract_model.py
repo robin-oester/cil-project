@@ -7,6 +7,7 @@ from cil_project.dataset import RatingsDataset
 from cil_project.utils import NUM_MOVIES, NUM_USERS
 from myfm import RelationBlock  # pylint: disable=E0401
 from scipy import sparse as sps
+from sklearn.cluster import KMeans
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +20,11 @@ class AbstractModel(ABC):
     def __init__(
         self,
         rank: int = 4,
+        num_bins: int = 50,
         grouped: bool = False,
         implicit: bool = False,
         statistical_features: bool = False,
+        kmeans: bool = False,
     ) -> None:
         """
         Initializes a new bfm given some model configuration options.
@@ -34,7 +37,9 @@ class AbstractModel(ABC):
         self.grouped = grouped
         self.implicit = implicit
         self.statistical_features = statistical_features
-        self.num_bins = 50
+        self.num_bins = num_bins
+        self.num_clusters = 5
+        self.kmeans = kmeans
 
     @abstractmethod
     def train(
@@ -141,6 +146,7 @@ class AbstractModel(ABC):
 
         return user_vs_watched, movie_vs_watched
 
+    # pylint: disable=R0911
     def get_group_shapes(self) -> list[int]:
         """
         Returns the group shapes for the model.
@@ -158,12 +164,21 @@ class AbstractModel(ABC):
                         NUM_MOVIES,
                         NUM_USERS,
                     ]
+                if self.kmeans:
+                    return [self.num_clusters, NUM_USERS, NUM_MOVIES, self.num_clusters, NUM_MOVIES, NUM_USERS]
                 return [NUM_USERS, NUM_MOVIES, NUM_MOVIES, NUM_USERS]
             if self.statistical_features:
                 return [self.num_bins, self.num_bins, NUM_USERS, self.num_bins, self.num_bins, NUM_MOVIES]
+            if self.kmeans:
+                return [self.num_clusters, NUM_USERS, self.num_clusters, NUM_MOVIES]
             return [NUM_USERS, NUM_MOVIES]
 
         return None
+
+    def get_clustering_features(self, data: sps.csr_matrix, num_clusters: int) -> sps.csr_matrix:
+        kmeans = KMeans(n_clusters=num_clusters, random_state=0)
+        clusters = kmeans.fit_predict(data.toarray())
+        return sps.csr_matrix(np.eye(num_clusters)[clusters])
 
     # pylint: disable=R0914
     def get_features(
@@ -171,10 +186,9 @@ class AbstractModel(ABC):
         dataset: RatingsDataset,
         train_dataset: RatingsDataset,
     ) -> Tuple:
-        df = dataset.get_data_frame()
-
-        users = df["user"].to_numpy(dtype=int)
-        movies = df["movie"].to_numpy(dtype=int)
+        inputs = dataset.get_inputs()
+        users = inputs[:, 0]
+        movies = inputs[:, 1]
 
         user_vs_watched, movie_vs_watched = self.get_implicit_features(train_dataset)
 
@@ -184,13 +198,23 @@ class AbstractModel(ABC):
         block_user = RelationBlock(users, user_data)
         block_movie = RelationBlock(movies, movie_data)
 
-        mean_minmax = (1, 5 + 1e-6)  # add a small value to the max to include the max value in the last bin
-        std_minmax = (0, 4 + 1e-6)
+        if self.kmeans:
+            # kmeans and statistical features can be combined currently
+            user_clusters = self.get_clustering_features(user_data, self.num_clusters)
+            movie_clusters = self.get_clustering_features(movie_data, self.num_clusters)
+
+            user_cluser_block = RelationBlock(users, user_clusters)
+            movie_cluster_block = RelationBlock(movies, movie_clusters)
+
+            return [user_cluser_block, block_user, movie_cluster_block, block_movie]
 
         if not self.statistical_features:
             return [block_user, block_movie]
-
         # Bin and one-hot encode the user means, standard deviations, and movie means and standard deviations
+
+        mean_minmax = (1, 5 + 1e-6)  # add a small value to the max to include the max value in the last bin
+        std_minmax = (0, 2 + 1e-6)
+
         ohe_user_means = self.bin_and_one_hot_encode(train_dataset._user_means, mean_minmax)
         ohe_user_stds = self.bin_and_one_hot_encode(train_dataset._user_stds, std_minmax)
         user_stats = RelationBlock(users, sps.hstack([ohe_user_means, ohe_user_stds], format="csr"))

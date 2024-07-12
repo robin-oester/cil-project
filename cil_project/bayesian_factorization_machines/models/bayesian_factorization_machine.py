@@ -13,11 +13,13 @@ class BayesianFactorizationMachine(AbstractModel, RatingPredictor):
     def __init__(
         self,
         rank: int = 4,
+        num_bins: int = 50,
         grouped: bool = False,
         implicit: bool = False,
         statistical_features: bool = False,
+        kmeans: bool = False,
     ) -> None:
-        super().__init__(rank, grouped, implicit, statistical_features)
+        super().__init__(rank, num_bins, grouped, implicit, statistical_features, kmeans)
 
         self.model = MyFMRegressor(rank=rank, random_seed=42)
         self.train_dataset = None

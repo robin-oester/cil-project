@@ -13,11 +13,13 @@ class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
     def __init__(
         self,
         rank: int = 4,
+        num_bins: int = 50,
         grouped: bool = False,
         implicit: bool = False,
         statistical_features: bool = False,
+        kmeans: bool = False,
     ) -> None:
-        super().__init__(rank, grouped, implicit, statistical_features)
+        super().__init__(rank, num_bins, grouped, implicit, statistical_features, kmeans)
 
         self.model = MyFMOrderedProbit(rank=rank, random_seed=42)
         self.train_dataset = None
@@ -40,7 +42,7 @@ class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
         x_rel_train = self.get_features(train_dataset, train_dataset)
         x_rel_test = self.get_features(test_dataset, train_dataset)
         group_shapes = self.get_group_shapes()
-
+        print(f"Group shapes: {group_shapes}")
         n_kept_samples = n_iter
 
         self.model.fit(

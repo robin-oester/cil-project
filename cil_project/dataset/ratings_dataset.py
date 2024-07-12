@@ -5,6 +5,7 @@ import re
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 import torch
 from cil_project.utils import DATA_PATH, MAX_RATING, MIN_RATING, nanmean, nanstd
 from torch.utils.data import Dataset
@@ -338,3 +339,11 @@ class RatingsDataset(Dataset):
 
     def get_targets(self) -> np.ndarray:
         return self._targets
+
+    def get_data_frame(self):
+        """
+        Returns the dataset as a pandas DataFrame.
+        """
+        data = self._inputs
+        df = pd.DataFrame(data, columns=["user", "movie"])
+        return df

@@ -33,6 +33,7 @@ class BFMTrainingProcedure:
     def __init__(
         self,
         rank: int,
+        num_bins: int,
         iterations: int,
         kfold: int,
         dataset: RatingsDataset,
@@ -40,6 +41,7 @@ class BFMTrainingProcedure:
         implicit: bool = True,
         statistical_features: bool = True,
         ordinal_probit: bool = True,
+        kmeans: bool = False,
     ) -> None:
         self.kfold = kfold
         self.dataset = dataset
@@ -47,11 +49,17 @@ class BFMTrainingProcedure:
         self.grouped = grouped
         self.implicit = implicit
         self.statistical_features = statistical_features
+        self.num_bins = num_bins
+        self.kmeans = kmeans
 
         if ordinal_probit:
-            self.model = BayesianFactorizationMachineOP(rank, self.grouped, self.implicit, self.statistical_features)
+            self.model = BayesianFactorizationMachineOP(
+                rank, self.num_bins, self.grouped, self.implicit, self.statistical_features, self.kmeans
+            )
         else:
-            self.model = BayesianFactorizationMachine(rank, self.grouped, self.implicit, self.statistical_features)
+            self.model = BayesianFactorizationMachine(
+                rank, self.num_bins, self.grouped, self.implicit, self.statistical_features, self.kmeans
+            )
 
     def start_training(self) -> None:
         splitter = BalancedKFold(self.kfold, True)
@@ -117,6 +125,8 @@ def main() -> None:
 
     parser.add_argument("--op", action="store_true", help="Whether to use ordinal probit.")
 
+    parser.add_argument("--kmeans", action="store_true", help="Whether to use kmeans.")
+
     args = parser.parse_args()
 
     rank: int = args.rank
@@ -127,17 +137,18 @@ def main() -> None:
     implicit: bool = args.implicit
     statistical_features: bool = args.statistics
     ordinal_probit: bool = args.op
+    kmeans: bool = args.kmeans
 
     logger.info(
         f"Initialized the training procedure for the BFM with rank {rank} "
         f"and {iterations} iterations on dataset '{dataset_name}'."
         f"Grouped: {grouped}, Implicit: {implicit}, Statistics: {
-            statistical_features}, Ordinal Probit: {ordinal_probit}"
+            statistical_features}, Ordinal Probit: {ordinal_probit}, Kmeans: {kmeans}"
     )
 
     dataset = RatingsDataset.load(dataset_name)
     training_procedure = BFMTrainingProcedure(
-        rank, iterations, kfold, dataset, grouped, implicit, statistical_features, ordinal_probit
+        rank, 10, iterations, kfold, dataset, grouped, implicit, statistical_features, ordinal_probit, kmeans
     )
     training_procedure.start_training()
 
