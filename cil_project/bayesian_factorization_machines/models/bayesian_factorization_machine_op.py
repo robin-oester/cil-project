@@ -1,9 +1,9 @@
 # This code is adapted from https://myfm.readthedocs.io/en/stable/index.html
 
 import numpy as np
-from cil_project.dataset import RatingsDataset, SubmissionDataset
+from cil_project.dataset import RatingsDataset
 from cil_project.ensembling import RatingPredictor
-from cil_project.utils import DATA_PATH, SUBMISSION_FILE_NAME, rmse
+from cil_project.utils import rmse
 from myfm import MyFMOrderedProbit  # pylint: disable=E0401
 
 from .abstract_model import AbstractModel
@@ -89,9 +89,8 @@ class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
         if self.train_dataset is None:
             raise ValueError("Model is not trained yet. Call the 'train' method to train the model.")
 
-        input_path = DATA_PATH / SUBMISSION_FILE_NAME
-        submission_dataset = SubmissionDataset(input_path)
-        x_rel = self.get_features(submission_dataset, self.train_dataset)
+        pred_dataset = RatingsDataset(x, np.zeros((x.shape[0], 1)))
+        x_rel = self.get_features(pred_dataset, self.train_dataset)
         p_ordinal = self.model.predict_proba(None, X_rel=x_rel)
         y_pred = p_ordinal.dot(np.arange(1, 6))
         return y_pred.reshape(-1, 1)
