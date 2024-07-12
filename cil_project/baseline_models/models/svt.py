@@ -1,8 +1,12 @@
+import logging
+
 import numpy as np
 from cil_project.ensembling import RatingPredictor
 from cil_project.utils import masked_rmse
 
 from .baseline import Baseline
+
+logger = logging.getLogger(__name__)
 
 
 class SVT(Baseline, RatingPredictor):
@@ -42,7 +46,7 @@ class SVT(Baseline, RatingPredictor):
                 r = np.clip(self.reconstructed_matrix.copy() * self.column_std + self.column_mean, 1, 5)
                 rmse = masked_rmse(self.test_m, r, self.test_m_mask)
                 self.rmse = rmse
-                print(f"Iteration {it+1}, Validation RMSE: {rmse}")
+                logger.info(f"Epoch {it+1}/{max_iter}, Validation RMSE: {rmse}")
 
     def train(
         self, data_matrix: np.ndarray, test_m: np.ndarray = np.array([]), test_m_mask: np.ndarray = np.array([])

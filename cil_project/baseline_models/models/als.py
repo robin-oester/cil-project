@@ -1,12 +1,16 @@
+import logging
+
 import numpy as np
 from cil_project.ensembling import RatingPredictor
 from cil_project.utils import masked_rmse
 
 from .baseline import Baseline
 
+logger = logging.getLogger(__name__)
+
 
 class ALS(Baseline, RatingPredictor):
-    def __init__(self, k: int = 3, max_iter: int = 20, lam: float = 0.2, verbose: bool = False):
+    def __init__(self, k: int = 3, max_iter: int = 21, lam: float = 0.2826666666666667, verbose: bool = False):
         super().__init__()
         self.u: np.ndarray = np.array([])
         self.v: np.ndarray = np.array([])
@@ -53,7 +57,7 @@ class ALS(Baseline, RatingPredictor):
                 r = np.clip(self.reconstructed_matrix.copy() * self.column_std + self.column_mean, 1, 5)
                 rmse = masked_rmse(self.test_m, r, self.test_m_mask)
                 self.rmse = rmse
-                print(f"Iteration {it+1}, Validation RMSE: {rmse}")
+                logger.info(f"Epoch {it+1}/{max_iter}, Validation RMSE: {rmse}")
 
         self.u, self.v = u, v
         self.reconstructed_matrix = np.dot(u, v)
