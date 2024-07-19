@@ -287,7 +287,7 @@ class RatingsDataset(Dataset):
 
     def get_data_matrix_mask(self) -> np.ndarray:
         """
-        Returns the mask of the matrix representation. Each non-zero value marks an observed rating.
+        Returns the boolean mask of the matrix representation. Each non-zero value marks an observed rating.
 
         :return: the mask (of shape U x M for U users and M movies)
         """
@@ -296,7 +296,7 @@ class RatingsDataset(Dataset):
 
         for user_id, movie_id in self._inputs:
             ratings[user_id][movie_id] = 1
-        return ratings
+        return ratings.astype(bool)
 
     def get_num_ratings_per_user(self) -> np.ndarray:
         """
@@ -337,7 +337,7 @@ class RatingsDataset(Dataset):
         return self._normalization is not None
 
     def get_target_mean(self) -> float:
-        return self._targets.mean()
+        return float(self._targets.mean())
 
     def get_inputs(self) -> np.ndarray:
         return self._inputs

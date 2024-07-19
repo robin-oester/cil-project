@@ -38,3 +38,26 @@ In order to keep the project organized, we propose the following workflow for co
 ## 📂 Project Organization
 - ```data/data_train.csv``` holds the training data with (Id,Prediction) tuples. The Id consists of a given (user, movie) rating. For example r44_c1 refers to the rating of the 44-th user for the 1st movie. The movie ratings are integer values ranging from 1-5.
 - ```data/sampleSubmission.csv``` is a sample submission file. It holds the Ids, for which the predictions have to be made.
+
+## ▶️ Run Experiments
+
+Here, you can find all scripts used to reproduce the results of our different methods. Depending on your system, you might need to replace forward slashes "/" with backward slashes "\".
+
+### Neural Collaborative Filtering (MLP-based)
+
+### Neural Collaborative Filtering (KAN-based)
+
+### Neural Collaborative Filtering (combined)
+
+### Autoencoder
+
+## 📊 Results
+<div style="text-align: center;">
+
+| Method   | Local RMSE (CV) | Public RMSE |
+|:---------|:---------------:|:-----------:|
+| Method 1 |      0.85       |    0.82     |
+| Method 2 |      0.88       |    0.85     |
+| Method 3 |      0.90       |    0.87     |
+
+</div>
