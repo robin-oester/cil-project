@@ -1,10 +1,10 @@
 import logging
 from typing import Optional
 
-from cil_project.dataset import RatingsDataset, TargetNormalization
+from cil_project.dataset import RatingsDataset
 from cil_project.neural_filtering.evaluators import RatingEvaluator
-from cil_project.neural_filtering.models import NCF
-from cil_project.neural_filtering.trainers import AbstractTrainer, RatingTrainer
+from cil_project.neural_filtering.models import SVDPP
+from cil_project.neural_filtering.trainers import AbstractTrainer, SVDPPTrainer
 from cil_project.neural_filtering.training.abstract_training_procedure import AbstractTrainingProcedure
 from torch import optim
 from torch.optim import Adam
@@ -16,39 +16,41 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# hyperparameters
+LEARNING_RATE = 0.002
+DECAY = 0.7
+WEIGHT_DECAY = 1e-5
+NUM_EPOCHS = 5
+BATCH_SIZE = 4096
+NR_FACTORS = 180
+LAM = 0.03
+LAM1 = 10.0
+LAM2 = 25.0
+LAM3 = 10.0
 
-# learning constants
-NUM_EPOCHS = 25
-LEARNING_RATE = 1e-3
-WEIGHT_DECAY = 1e-4
-GAMMA = 0.97
-EMBEDDING_DIM = 128
-HIDDEN_DIM = 384
-BATCH_SIZE = 512
 
-
-class NCFProcedure(AbstractTrainingProcedure):
+class SVDPPTrainingProcedure(AbstractTrainingProcedure):
     """
-    Class used to perform training of the MLP-based NCF model.
+    Class used to train SVDPP.
     """
 
     def __init__(self) -> None:
-        hyperparameters = {"embedding_dim": EMBEDDING_DIM, "hidden_dim": HIDDEN_DIM}
-        super().__init__(hyperparameters, NUM_EPOCHS, TargetNormalization.BY_MOVIE)
+        hyperparameters = {"nr_factors": NR_FACTORS, "lam": LAM, "lam1": LAM1, "lam2": LAM2, "lam3": LAM3}
+        super().__init__(hyperparameters, NUM_EPOCHS)
 
     def get_trainer(
         self, train_dataset: RatingsDataset, val_dataset: Optional[RatingsDataset] = None
     ) -> AbstractTrainer:
-        model = NCF(self.model_hyperparameters)
+        model = SVDPP(self.model_hyperparameters)
 
         optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=GAMMA)
+        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=DECAY)
 
         evaluator = RatingEvaluator(model, BATCH_SIZE, train_dataset, val_dataset)
 
-        return RatingTrainer(model, BATCH_SIZE, optimizer, scheduler, evaluator)
+        return SVDPPTrainer(model, BATCH_SIZE, optimizer, scheduler, evaluator)
 
 
 if __name__ == "__main__":
-    procedure = NCFProcedure()
+    procedure = SVDPPTrainingProcedure()
     procedure.start_procedure()

@@ -69,7 +69,10 @@ def validate_parameter_types(hyperparameters: dict[str, Any], types: list[tuple[
         if param_name not in hyperparameters:
             raise ModelInitializationError(param_name, "Parameter not found")
         if not isinstance(hyperparameters[param_name], param_type):
-            raise ModelInitializationError(param_name, "Parameter doesn't match with expected type")
+            raise ModelInitializationError(
+                param_name,
+                f"Parameter doesn't match with expected type ({type(hyperparameters[param_name])} vs {param_type})",
+            )
 
 
 def nanmean(arr: np.ndarray, axis: Optional[int] = None) -> np.ndarray:

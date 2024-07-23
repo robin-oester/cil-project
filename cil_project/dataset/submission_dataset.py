@@ -17,8 +17,15 @@ class SubmissionDataset:
     """
 
     def __init__(self, inputs: np.ndarray, predictions: np.ndarray):
-        self.inputs = inputs
-        self.predictions = predictions
+        """
+        Initialize the submission dataset.
+
+        :param inputs: the inputs of the submission having shape (N, 2) for (user_id, movie_id)-pairs.
+        :param predictions: the associated predictions (shape (N, 1)).
+        """
+
+        self.inputs = inputs  # shape: (N, 2)
+        self.predictions = predictions  # shape: (N, 1)
 
     @classmethod
     def from_file(cls, file_path: pathlib.Path, set_values_to_zero: bool = True) -> "SubmissionDataset":
@@ -51,9 +58,7 @@ class SubmissionDataset:
                 predictions.append(rating)
 
         logging.info(f"Loaded a total of {len(predictions)} entries.")
-        inputs = np.array(inputs)  # shape: (N, 2)
-        predictions = np.array(predictions, dtype=np.float32).reshape((-1, 1))  # shape: (N, 1)
-        return cls(np.array(inputs), np.array(predictions))
+        return cls(np.array(inputs), np.array(predictions, dtype=np.float32).reshape((-1, 1)))
 
     def __len__(self) -> int:
         return len(self.predictions)
