@@ -2,10 +2,10 @@ import argparse
 import logging
 
 import numpy as np
-from cil_project.bayesian_factorization_machines.models.bayesian_factorization_machine import (
+from cil_project.bayesian_factorization_machines.bfm_models.bayesian_factorization_machine import (
     BayesianFactorizationMachine,
 )
-from cil_project.bayesian_factorization_machines.models.bayesian_factorization_machine_op import (
+from cil_project.bayesian_factorization_machines.bfm_models.bayesian_factorization_machine_op import (
     BayesianFactorizationMachineOP,
 )
 from cil_project.dataset import BalancedKFold, RatingsDataset, SubmissionDataset

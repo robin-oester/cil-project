@@ -69,11 +69,7 @@ class RatingsDataset(Dataset):
         self._user_means = dataset._user_means
         self._user_stds = dataset._user_stds
 
-        self._user_stds = dataset._user_stds
-
         self._movie_means = dataset._movie_means
-        self._movie_stds = dataset._movie_stds
-
         self._movie_stds = dataset._movie_stds
 
         self._target_mean = dataset._target_mean
@@ -98,16 +94,6 @@ class RatingsDataset(Dataset):
         ), f"Shapes of target and std do not match ({self._targets.shape} vs {std.shape}"
 
         self._targets = np.divide(self._targets - mean, std)
-        mean, std = self._get_normalization_statistics(normalization)
-
-        assert (
-            mean.shape == self._targets.shape
-        ), f"Shapes of target and mean do not match ({self._targets.shape} vs {mean.shape}"
-        assert (
-            std.shape == self._targets.shape
-        ), f"Shapes of target and std do not match ({self._targets.shape} vs {std.shape}"
-
-        self._targets = np.divide(self._targets - mean, std)
         self._normalization = normalization
 
     def denormalize(self) -> None:
@@ -115,9 +101,6 @@ class RatingsDataset(Dataset):
         Denormalizes the targets if they have been normalized.
         """
 
-        if self._normalization is not None:
-            mean, std = self._get_normalization_statistics(self._normalization)
-            self._targets = np.multiply(self._targets, std) + mean
         if self._normalization is not None:
             mean, std = self._get_normalization_statistics(self._normalization)
             self._targets = np.multiply(self._targets, std) + mean
@@ -143,6 +126,9 @@ class RatingsDataset(Dataset):
         elif normalization.value == TargetNormalization.BY_TARGET.value:
             mean.fill(self._target_mean)
             std.fill(self._target_std)
+        elif normalization.value == TargetNormalization.TO_UNIT_RANGE.value:
+            mean.fill(1.0)
+            std.fill(4.0)
         else:
             # this is TargetNormalization.TO_TANH_RANGE
             mean.fill(3.0)
@@ -360,7 +346,7 @@ class RatingsDataset(Dataset):
     def get_targets(self) -> np.ndarray:
         return self._targets
 
-    def get_data_frame(self):
+    def get_data_frame(self) -> pd.DataFrame:
         """
         Returns the dataset as a pandas DataFrame.
         """

@@ -1,5 +1,3 @@
-# This code is adapted from https://myfm.readthedocs.io/en/stable/index.html
-
 import numpy as np
 from cil_project.dataset import RatingsDataset
 from cil_project.ensembling import RatingPredictor

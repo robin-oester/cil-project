@@ -1,6 +1,8 @@
+# Some code is adapted from https://myfm.readthedocs.io/en/stable/index.html
+
 import logging
 from abc import ABC, abstractmethod
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 from cil_project.dataset import RatingsDataset
@@ -148,7 +150,7 @@ class AbstractModel(ABC):
         return user_vs_watched, movie_vs_watched
 
     # pylint: disable=R0911
-    def get_group_shapes(self) -> list[int]:
+    def get_group_shapes(self) -> Optional[list[int]]:
         """
         Returns the group shapes for the model.
         """
@@ -186,7 +188,7 @@ class AbstractModel(ABC):
         self,
         dataset: RatingsDataset,
         train_dataset: RatingsDataset,
-    ) -> Tuple:
+    ) -> list[RelationBlock]:
         inputs = dataset.get_inputs()
         users = inputs[:, 0]
         movies = inputs[:, 1]
