@@ -1,10 +1,14 @@
+import logging
+
 import numpy as np
 from cil_project.dataset import RatingsDataset
 from cil_project.ensembling import RatingPredictor
 from cil_project.utils import rmse
-from myfm import MyFMOrderedProbit  # pylint: disable=E0401
+from myfm import MyFMOrderedProbit
 
 from .abstract_model import AbstractModel
+
+logger = logging.getLogger(__name__)
 
 
 class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
@@ -30,7 +34,7 @@ class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
         test_dataset: RatingsDataset,
         n_iter: int = 300,
     ) -> float:
-        print("Training Bayesian Factorization Machine...")
+        logger.info("Training Bayesian Factorization Machine...")
 
         self.train_dataset = train_dataset
         y_train = train_dataset.get_targets().reshape(1, -1)[0]
@@ -42,7 +46,7 @@ class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
         x_rel_train = self.get_features(train_dataset, train_dataset)
         x_rel_test = self.get_features(test_dataset, train_dataset)
         group_shapes = self.get_group_shapes()
-        print(f"Group shapes: {group_shapes}")
+        logger.info(f"Group shapes: {group_shapes}")
         n_kept_samples = n_iter
 
         self.model.fit(
@@ -58,7 +62,7 @@ class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
         y_pred = p_ordinal.dot(np.arange(1, 6))
 
         error = rmse(y_test, y_pred)
-        print(f"RMSE: {error}")
+        logger.info(f"RMSE: {error}")
         return error
 
     def final_train(
@@ -66,7 +70,7 @@ class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
         dataset: RatingsDataset,
         n_iter: int = 300,
     ) -> None:
-        print("Training Bayesian Factorization Machine...")
+        logger.info("Training Bayesian Factorization Machine...")
 
         self.train_dataset = dataset
         y_train = dataset.get_targets().reshape(1, -1)[0]

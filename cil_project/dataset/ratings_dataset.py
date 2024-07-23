@@ -346,6 +346,18 @@ class RatingsDataset(Dataset):
     def get_targets(self) -> np.ndarray:
         return self._targets
 
+    def get_movie_means(self) -> np.ndarray:
+        return self._movie_means
+
+    def get_movie_stds(self) -> np.ndarray:
+        return self._movie_stds
+
+    def get_user_means(self) -> np.ndarray:
+        return self._user_means
+
+    def get_user_stds(self) -> np.ndarray:
+        return self._user_stds
+
     def get_data_frame(self) -> pd.DataFrame:
         """
         Returns the dataset as a pandas DataFrame.

@@ -7,7 +7,7 @@ from typing import Optional, Tuple
 import numpy as np
 from cil_project.dataset import RatingsDataset
 from cil_project.utils import NUM_MOVIES, NUM_USERS
-from myfm import RelationBlock  # pylint: disable=E0401
+from myfm import RelationBlock
 from scipy import sparse as sps
 from sklearn.cluster import KMeans
 
@@ -29,12 +29,6 @@ class AbstractModel(ABC):
         statistical_features: bool = False,
         kmeans: bool = False,
     ) -> None:
-        """
-        Initializes a new bfm given some model configuration options.
-
-        :param hyperparameters: consists of all model configuration options.
-        """
-
         super().__init__()
         self.rank = rank
         self.grouped = grouped
@@ -54,6 +48,7 @@ class AbstractModel(ABC):
         """
         Trains the model on the given training data and evaluates it on the given test data.
         """
+
         raise NotImplementedError()
 
     @abstractmethod
@@ -61,6 +56,7 @@ class AbstractModel(ABC):
         """
         Predicts the ratings for the given inputs.
         """
+
         raise NotImplementedError()
 
     def augment_user_id(
@@ -178,7 +174,8 @@ class AbstractModel(ABC):
 
         return None
 
-    def get_clustering_features(self, data: sps.csr_matrix, num_clusters: int) -> sps.csr_matrix:
+    @staticmethod
+    def get_clustering_features(data: sps.csr_matrix, num_clusters: int) -> sps.csr_matrix:
         kmeans = KMeans(n_clusters=num_clusters, random_state=0)
         clusters = kmeans.fit_predict(data.toarray())
         return sps.csr_matrix(np.eye(num_clusters)[clusters])
@@ -198,16 +195,16 @@ class AbstractModel(ABC):
         user_data = self.augment_user_id(user_vs_watched)
         movie_data = self.augment_movie_id(movie_vs_watched)
 
-        block_user = RelationBlock(users, user_data)
-        block_movie = RelationBlock(movies, movie_data)
+        block_user = RelationBlock(users.tolist(), user_data)
+        block_movie = RelationBlock(movies.tolist(), movie_data)
 
         if self.kmeans:
             # kmeans and statistical features can be combined currently
-            user_clusters = self.get_clustering_features(user_data, self.num_clusters)
-            movie_clusters = self.get_clustering_features(movie_data, self.num_clusters)
+            user_clusters = AbstractModel.get_clustering_features(user_data, self.num_clusters)
+            movie_clusters = AbstractModel.get_clustering_features(movie_data, self.num_clusters)
 
-            user_cluser_block = RelationBlock(users, user_clusters)
-            movie_cluster_block = RelationBlock(movies, movie_clusters)
+            user_cluser_block = RelationBlock(users.tolist(), user_clusters)
+            movie_cluster_block = RelationBlock(movies.tolist(), movie_clusters)
 
             return [user_cluser_block, block_user, movie_cluster_block, block_movie]
 
@@ -218,12 +215,12 @@ class AbstractModel(ABC):
         mean_minmax = (1, 5 + 1e-6)  # add a small value to the max to include the max value in the last bin
         std_minmax = (0, 2 + 1e-6)
 
-        ohe_user_means = self.bin_and_one_hot_encode(train_dataset._user_means, mean_minmax)
-        ohe_user_stds = self.bin_and_one_hot_encode(train_dataset._user_stds, std_minmax)
-        user_stats = RelationBlock(users, sps.hstack([ohe_user_means, ohe_user_stds], format="csr"))
+        ohe_user_means = self.bin_and_one_hot_encode(train_dataset.get_user_means(), mean_minmax)
+        ohe_user_stds = self.bin_and_one_hot_encode(train_dataset.get_user_stds(), std_minmax)
+        user_stats = RelationBlock(users.tolist(), sps.hstack([ohe_user_means, ohe_user_stds], format="csr"))
 
-        ohe_movie_means = self.bin_and_one_hot_encode(train_dataset._movie_means, mean_minmax)
-        ohe_movie_stds = self.bin_and_one_hot_encode(train_dataset._movie_stds, std_minmax)
-        movie_stats = RelationBlock(movies, sps.hstack([ohe_movie_means, ohe_movie_stds], format="csr"))
+        ohe_movie_means = self.bin_and_one_hot_encode(train_dataset.get_movie_means(), mean_minmax)
+        ohe_movie_stds = self.bin_and_one_hot_encode(train_dataset.get_movie_stds(), std_minmax)
+        movie_stats = RelationBlock(movies.tolist(), sps.hstack([ohe_movie_means, ohe_movie_stds], format="csr"))
 
         return [user_stats, block_user, movie_stats, block_movie]

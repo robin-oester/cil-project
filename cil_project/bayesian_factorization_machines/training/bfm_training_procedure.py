@@ -1,7 +1,6 @@
 import argparse
 import logging
 
-import numpy as np
 from cil_project.bayesian_factorization_machines.bfm_models.bayesian_factorization_machine import (
     BayesianFactorizationMachine,
 )
@@ -83,28 +82,27 @@ class BFMTrainingProcedure:
 
         rmse_values = []
 
-        for train_indices, test_indices in iterator:
-            train_dataset = self.dataset.get_split(train_indices)
-            test_dataset = self.dataset.get_split(test_indices)
-            try:
+        try:
+            for train_indices, test_indices in iterator:
+                train_dataset = self.dataset.get_split(train_indices)
+                test_dataset = self.dataset.get_split(test_indices)
                 rmse_values.append(self.model.train(train_dataset, test_dataset, self.iterations))
-            except KeyboardInterrupt:
-                logger.info("Training interrupted by the user.")
 
-        print("Mean RMSE: ", sum(rmse_values) / len(rmse_values))
+            logger.info(f"Mean RMSE: {sum(rmse_values) / len(rmse_values):.4f}")
+        except KeyboardInterrupt:
+            logger.info("Training interrupted by the user.")
 
     def final_train(self) -> None:
         self.model.final_train(self.dataset, self.iterations)
 
-    def generate_data_for_stacking(self) -> None:
-        np.random.seed(0)
+    def generate_data_for_stacking(self, train_base_name: str, val_base_name: str, k: int = 10) -> None:
         num_folds = 10
         avg_rmse = 0.0
-        for fold in range(10):
+        for fold in range(k):
 
-            # taining and validation split
-            train_dataset = RatingsDataset.load(f"kfold/stacking_train_{fold}")
-            val_dataset = RatingsDataset.load(f"kfold/stacking_val_{fold}")
+            # training and validation split
+            train_dataset = RatingsDataset.load(f"{train_base_name}_{fold}")
+            val_dataset = RatingsDataset.load(f"{val_base_name}_{fold}")
 
             # generate predictions for the validation fold
             try:
@@ -122,18 +120,15 @@ class BFMTrainingProcedure:
 
         # generate predictions for the test set
         try:
-
             self.final_train()
             self.model.generate_predictions(SUBMISSION_FILE_NAME)
-
         except KeyboardInterrupt:
             logger.info("Training interrupted by the user.")
 
     # pylint: disable=too-many-locals
-    def generate_data_for_blending(self) -> None:
-        np.random.seed(0)
-        train_dataset = RatingsDataset.load("blending/blending_train")
-        val_dataset = RatingsDataset.load("blending/blending_val")
+    def generate_data_for_blending(self, train_name: str, val_name: str) -> None:
+        train_dataset = RatingsDataset.load(train_name)
+        val_dataset = RatingsDataset.load(val_name)
 
         # generate predictions for the validation set
         try:
@@ -143,12 +138,7 @@ class BFMTrainingProcedure:
             fold_dataset = SubmissionDataset(inpts, preds)
             write_predictions_to_csv(fold_dataset, self.model.get_name(), 0)
 
-        except KeyboardInterrupt:
-            logger.info("Training interrupted by the user.")
-
-        # generate predictions for the test set
-        try:
-            self.final_train()
+            # generate predictions for the test set
             self.model.generate_predictions(SUBMISSION_FILE_NAME)
 
         except KeyboardInterrupt:
@@ -156,8 +146,6 @@ class BFMTrainingProcedure:
 
 
 # pylint: disable=too-many-locals
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Train Bayesian Factorization Machine with the specified rank and number of iterations. \
@@ -204,9 +192,21 @@ def main() -> None:
 
     parser.add_argument("--kmeans", action="store_true", help="Whether to use kmeans.")
 
-    parser.add_argument("--stacking", action="store_true", help="Whether to generate data for stacking.")
+    # blending mode
+    parser.add_argument(
+        "--blending",
+        nargs=2,
+        metavar=("TRAINING_DATASET", "VALIDATION_DATASET"),
+        help="Run in blending mode with specified training and validation datasets",
+    )
 
-    parser.add_argument("--blending", action="store_true", help="Whether to generate data for blending.")
+    # stacking mode
+    parser.add_argument(
+        "--stacking",
+        nargs=2,
+        metavar=("TRAINING_DATASET_BASE", "VALIDATION_DATASET_BASE"),
+        help="Run in stacking mode with specified training and validation dataset base names",
+    )
 
     parser.add_argument(
         "--num_bins", type=int, required=False, default=5, help="The number of bins for statistical features."
@@ -227,16 +227,14 @@ def main() -> None:
     statistical_features: bool = args.statistics
     ordinal_probit: bool = args.op
     kmeans: bool = args.kmeans
-    stacking: bool = args.stacking
-    blending: bool = args.blending
     num_bins: int = args.num_bins
     num_clusters: int = args.num_clusters
 
     logger.info(
         f"Initialized the training procedure for the BFM with rank {rank} "
-        f"and {iterations} iterations on dataset '{dataset_name}'."
-        f"Grouped: {grouped}, Implicit: {implicit}, Statistics: {
-            statistical_features}, Ordinal Probit: {ordinal_probit}, Kmeans: {kmeans}"
+        f"and {iterations} iterations on dataset '{dataset_name}'. "
+        f"Grouped: {grouped}, Implicit: {implicit}, Statistics: "
+        f"{statistical_features}, Ordinal Probit: {ordinal_probit}, Kmeans: {kmeans}"
     )
 
     dataset = RatingsDataset.load(dataset_name)
@@ -254,10 +252,14 @@ def main() -> None:
         kmeans,
     )
 
-    if stacking:
-        training_procedure.generate_data_for_stacking()
-    elif blending:
-        training_procedure.generate_data_for_blending()
+    if args.stacking:
+        training_dataset_base, validation_dataset_base = args.stacking
+
+        training_procedure.generate_data_for_stacking(training_dataset_base, validation_dataset_base)
+    elif args.blending:
+        training_dataset, validation_dataset = args.blending
+
+        training_procedure.generate_data_for_blending(training_dataset, validation_dataset)
     else:
         training_procedure.start_training()
 

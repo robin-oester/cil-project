@@ -1,7 +1,6 @@
 import logging
 
 import numpy as np
-from cil_project.ensembling import RatingPredictor
 from cil_project.utils import masked_rmse
 
 from .baseline import Baseline
@@ -9,7 +8,7 @@ from .baseline import Baseline
 logger = logging.getLogger(__name__)
 
 
-class SVT(Baseline, RatingPredictor):
+class SVT(Baseline):
     def __init__(self, max_iter: int = 60, eta: float = 1.05, tau: float = 37, verbose: bool = False):
         super().__init__()  # Initialize the Baseline class
         self.u: np.ndarray = np.array([])

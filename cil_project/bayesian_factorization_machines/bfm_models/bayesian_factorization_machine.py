@@ -1,10 +1,14 @@
+import logging
+
 import numpy as np
 from cil_project.dataset import RatingsDataset
 from cil_project.ensembling import RatingPredictor
 from cil_project.utils import MAX_RATING, MIN_RATING, rmse
-from myfm import MyFMRegressor  # pylint: disable=E0401
+from myfm import MyFMRegressor
 
 from .abstract_model import AbstractModel
+
+logger = logging.getLogger(__name__)
 
 
 class BayesianFactorizationMachine(AbstractModel, RatingPredictor):
@@ -31,7 +35,7 @@ class BayesianFactorizationMachine(AbstractModel, RatingPredictor):
         test_dataset: RatingsDataset,
         n_iter: int = 300,
     ) -> float:
-        print("Training Bayesian Factorization Machine...")
+        logger.info("Training Bayesian Factorization Machine...")
 
         self.train_dataset = train_dataset
         y_train = train_dataset.get_targets().reshape(1, -1)[0]
@@ -57,7 +61,7 @@ class BayesianFactorizationMachine(AbstractModel, RatingPredictor):
         y_pred = np.clip(y_pred, MIN_RATING, MAX_RATING)
 
         error = rmse(y_test, y_pred)
-        print(f"RMSE: {error}")
+        logger.info(f"RMSE: {error}")
         return error
 
     def final_train(
@@ -65,7 +69,7 @@ class BayesianFactorizationMachine(AbstractModel, RatingPredictor):
         dataset: RatingsDataset,
         n_iter: int = 300,
     ) -> None:
-        print("Training Bayesian Factorization Machine...")
+        logger.info("Training Bayesian Factorization Machine...")
 
         self.train_dataset = dataset
         y_train = dataset.get_targets().reshape(1, -1)[0]

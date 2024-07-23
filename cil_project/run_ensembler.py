@@ -56,11 +56,16 @@ def run_ensembler() -> None:
     # find the available validation sets
     val_sets: list[RatingsDataset] = []
     if val_name is not None and regressor_name is not None:
-        idx = 0
-        while (path := DATA_PATH / f"{val_name}_{idx}.npz").is_file():
-            val_sets.append(RatingsDataset.load(path.stem))
-            idx += 1
-
+        initial_path = DATA_PATH / f"{val_name}.npz"
+        if initial_path.is_file():
+            # blending
+            val_sets.append(RatingsDataset.load(initial_path.stem))
+        else:
+            # stacking
+            idx = 0
+            while (path := DATA_PATH / f"{val_name}_{idx}.npz").is_file():
+                val_sets.append(RatingsDataset.load(path.stem))
+                idx += 1
         logger.info(f"Found {len(val_sets)} validation dataset(s).")
 
     # choose the correct meta regressor, also add new ones here

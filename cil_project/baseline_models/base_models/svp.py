@@ -1,7 +1,6 @@
 import logging
 
 import numpy as np
-from cil_project.ensembling import RatingPredictor
 from cil_project.utils import masked_rmse
 
 from .baseline import Baseline
@@ -9,7 +8,7 @@ from .baseline import Baseline
 logger = logging.getLogger(__name__)
 
 
-class SVP(Baseline, RatingPredictor):
+class SVP(Baseline):
     def __init__(self, k: int = 4, max_iter: int = 20, eta: float = 1.3315789473684212, verbose: bool = False):
         super().__init__()  # Initialize the Baseline class
         self.u: np.ndarray = np.array([])

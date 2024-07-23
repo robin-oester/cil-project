@@ -1,7 +1,6 @@
 import logging
 
 import numpy as np
-from cil_project.ensembling import RatingPredictor
 from cil_project.utils import masked_rmse
 
 from .baseline import Baseline
@@ -9,7 +8,7 @@ from .baseline import Baseline
 logger = logging.getLogger(__name__)
 
 
-class ALS(Baseline, RatingPredictor):
+class ALS(Baseline):
     def __init__(self, k: int = 3, max_iter: int = 21, lam: float = 0.2826666666666667, verbose: bool = False):
         super().__init__()
         self.u: np.ndarray = np.array([])
@@ -34,7 +33,7 @@ class ALS(Baseline, RatingPredictor):
         max_iter = self.hyperparameters["max_iter"]
         lam = self.hyperparameters["lam"]
 
-        d_matrix_mask = d_matrix != 0
+        d_matrix_mask = np.where(d_matrix != 0, 1, 0)
         num_users, num_movies = d_matrix.shape
         u = np.random.rand(num_users, k)
         v = np.random.rand(k, num_movies)

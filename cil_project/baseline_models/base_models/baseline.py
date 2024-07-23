@@ -1,9 +1,11 @@
+from abc import abstractmethod
 from typing import Any
 
 import numpy as np
+from cil_project.ensembling import RatingPredictor
 
 
-class Baseline:
+class Baseline(RatingPredictor):
     def __init__(self) -> None:
         self.hyperparameters: dict[str, Any] = {}
         self.reconstructed_matrix: np.ndarray = np.array([])
@@ -12,6 +14,12 @@ class Baseline:
         self.test_m = np.array([])
         self.test_m_mask = np.array([])
         self.rmse = 0.0
+
+    @abstractmethod
+    def train(
+        self, data_matrix: np.ndarray, test_m: np.ndarray = np.array([]), test_m_mask: np.ndarray = np.array([])
+    ) -> None:
+        raise NotImplementedError()
 
     def normalize_data_matrix(self, d_matrix: np.ndarray) -> np.ndarray:
         """
@@ -31,7 +39,7 @@ class Baseline:
 
     def denormalize_and_clip_reconstructed_matrix(self) -> None:
         """
-        Denormalizes the reconstruvted matrix and clips the values to the range [1, 5].
+        Denormalizes the reconstructed matrix and clips the values to the range [1, 5].
         """
         self.reconstructed_matrix = self.reconstructed_matrix * self.column_std + self.column_mean
         self.reconstructed_matrix = np.clip(self.reconstructed_matrix, 1, 5)
