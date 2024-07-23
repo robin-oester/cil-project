@@ -22,12 +22,6 @@ class ReconstructionEvaluator(AbstractEvaluator):
         device: Optional[str] = None,
     ) -> None:
         super().__init__(model, batch_size, dataset, val_dataset, device)
-
-        # helpers for efficient evaluation
-        if val_dataset is not None and not dataset.is_normalized():
-            self.test_matrix = val_dataset.get_data_matrix()
-            self.test_mask = np.where(self.test_matrix != 0, 1, 0)
-
         # TODO(#21): Implement other imputation methods than target mean.
         train_matrix = self.dataset.get_data_matrix(0)
         self.train_data_tensor = torch.tensor(train_matrix, device=self.device)

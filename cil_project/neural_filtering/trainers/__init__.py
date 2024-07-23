@@ -3,6 +3,7 @@ import os
 from .abstract_trainer import AbstractTrainer  # noqa: F401
 from .rating_trainer import RatingTrainer  # noqa: F401
 from .reconstruction_trainer import ReconstructionTrainer  # noqa: F401
+from .svdpp_trainer import SVDPPTrainer  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

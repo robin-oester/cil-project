@@ -14,6 +14,7 @@ class RatingEvaluator(AbstractEvaluator):
         output_size = inputs.shape[0]
         predictions = np.empty((output_size, 1), dtype=np.float32)
 
+        self.model.to(self.device)
         self.model.eval()
         with torch.no_grad():
             start_idx = 0

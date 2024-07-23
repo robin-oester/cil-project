@@ -3,7 +3,7 @@ from typing import Optional
 
 from cil_project.dataset import RatingsDataset, TargetNormalization
 from cil_project.neural_filtering.evaluators import RatingEvaluator
-from cil_project.neural_filtering.models import NCF
+from cil_project.neural_filtering.models import NCFGMFModel
 from cil_project.neural_filtering.trainers import AbstractTrainer, RatingTrainer
 from cil_project.neural_filtering.training.abstract_training_procedure import AbstractTrainingProcedure
 from torch import optim
@@ -18,28 +18,27 @@ logger = logging.getLogger(__name__)
 
 
 # learning constants
-NUM_EPOCHS = 25
-LEARNING_RATE = 1e-3
-WEIGHT_DECAY = 1e-4
-GAMMA = 0.97
-EMBEDDING_DIM = 128
-HIDDEN_DIM = 384
+NUM_EPOCHS = 10
+LEARNING_RATE = 1e-2
+WEIGHT_DECAY = 1e-5
+GAMMA = 0.85
+PREDICTIVE_FACTOR = 128
 BATCH_SIZE = 512
 
 
-class NCFProcedure(AbstractTrainingProcedure):
+class NCFGMFTrainingProcedure(AbstractTrainingProcedure):
     """
-    Class used to perform training of the MLP-based NCF model.
+    Procedure for training the GMF part of the combined NCF model.
     """
 
     def __init__(self) -> None:
-        hyperparameters = {"embedding_dim": EMBEDDING_DIM, "hidden_dim": HIDDEN_DIM}
+        hyperparameters = {"predictive_factor": PREDICTIVE_FACTOR}
         super().__init__(hyperparameters, NUM_EPOCHS, TargetNormalization.BY_MOVIE)
 
     def get_trainer(
         self, train_dataset: RatingsDataset, val_dataset: Optional[RatingsDataset] = None
     ) -> AbstractTrainer:
-        model = NCF(self.model_hyperparameters)
+        model = NCFGMFModel(self.model_hyperparameters)
 
         optimizer = Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=GAMMA)
@@ -50,5 +49,5 @@ class NCFProcedure(AbstractTrainingProcedure):
 
 
 if __name__ == "__main__":
-    procedure = NCFProcedure()
+    procedure = NCFGMFTrainingProcedure()
     procedure.start_procedure()
