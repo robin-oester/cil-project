@@ -1,14 +1,16 @@
 import argparse
 import logging
 
+import numpy as np
 from cil_project.bayesian_factorization_machines.models.bayesian_factorization_machine import (
     BayesianFactorizationMachine,
 )
 from cil_project.bayesian_factorization_machines.models.bayesian_factorization_machine_op import (
     BayesianFactorizationMachineOP,
 )
-from cil_project.dataset import BalancedKFold, RatingsDataset
-from cil_project.utils import FULL_SERIALIZED_DATASET_NAME
+from cil_project.dataset import BalancedKFold, RatingsDataset, SubmissionDataset
+from cil_project.ensembling.utils import write_predictions_to_csv
+from cil_project.utils import FULL_SERIALIZED_DATASET_NAME, SUBMISSION_FILE_NAME
 
 logging.basicConfig(
     level=logging.NOTSET,
@@ -34,6 +36,7 @@ class BFMTrainingProcedure:
         self,
         rank: int,
         num_bins: int,
+        num_clusters: int,
         iterations: int,
         kfold: int,
         dataset: RatingsDataset,
@@ -50,15 +53,28 @@ class BFMTrainingProcedure:
         self.implicit = implicit
         self.statistical_features = statistical_features
         self.num_bins = num_bins
+        self.num_clusters = num_clusters
         self.kmeans = kmeans
 
         if ordinal_probit:
             self.model = BayesianFactorizationMachineOP(
-                rank, self.num_bins, self.grouped, self.implicit, self.statistical_features, self.kmeans
+                rank,
+                self.num_bins,
+                self.num_clusters,
+                self.grouped,
+                self.implicit,
+                self.statistical_features,
+                self.kmeans,
             )
         else:
             self.model = BayesianFactorizationMachine(
-                rank, self.num_bins, self.grouped, self.implicit, self.statistical_features, self.kmeans
+                rank,
+                self.num_bins,
+                self.num_clusters,
+                self.grouped,
+                self.implicit,
+                self.statistical_features,
+                self.kmeans,
             )
 
     def start_training(self) -> None:
@@ -79,6 +95,67 @@ class BFMTrainingProcedure:
 
     def final_train(self) -> None:
         self.model.final_train(self.dataset, self.iterations)
+
+    def generate_data_for_stacking(self) -> None:
+        np.random.seed(0)
+        num_folds = 10
+        avg_rmse = 0.0
+        for fold in range(10):
+
+            # taining and validation split
+            train_dataset = RatingsDataset.load(f"kfold/stacking_train_{fold}")
+            val_dataset = RatingsDataset.load(f"kfold/stacking_val_{fold}")
+
+            # generate predictions for the validation fold
+            try:
+                avg_rmse += self.model.train(train_dataset, val_dataset, self.iterations)
+                inpts = val_dataset.get_inputs()
+                preds = self.model.predict(inpts)
+                fold_dataset = SubmissionDataset(inpts, preds)
+                write_predictions_to_csv(fold_dataset, self.model.get_name(), fold)
+
+            except KeyboardInterrupt:
+                logger.info("Training interrupted by the user.")
+
+        avg_rmse /= num_folds
+        logger.info(f"Average RMSE over {num_folds} folds: {avg_rmse}")
+
+        # generate predictions for the test set
+        try:
+
+            self.final_train()
+            self.model.generate_predictions(SUBMISSION_FILE_NAME)
+
+        except KeyboardInterrupt:
+            logger.info("Training interrupted by the user.")
+
+    # pylint: disable=too-many-locals
+    def generate_data_for_blending(self) -> None:
+        np.random.seed(0)
+        train_dataset = RatingsDataset.load("blending/blending_train")
+        val_dataset = RatingsDataset.load("blending/blending_val")
+
+        # generate predictions for the validation set
+        try:
+            self.model.train(train_dataset, val_dataset, self.iterations)
+            inpts = val_dataset.get_inputs()
+            preds = self.model.predict(inpts)
+            fold_dataset = SubmissionDataset(inpts, preds)
+            write_predictions_to_csv(fold_dataset, self.model.get_name(), 0)
+
+        except KeyboardInterrupt:
+            logger.info("Training interrupted by the user.")
+
+        # generate predictions for the test set
+        try:
+            self.final_train()
+            self.model.generate_predictions(SUBMISSION_FILE_NAME)
+
+        except KeyboardInterrupt:
+            logger.info("Training interrupted by the user.")
+
+
+# pylint: disable=too-many-locals
 
 
 def main() -> None:
@@ -127,6 +204,18 @@ def main() -> None:
 
     parser.add_argument("--kmeans", action="store_true", help="Whether to use kmeans.")
 
+    parser.add_argument("--stacking", action="store_true", help="Whether to generate data for stacking.")
+
+    parser.add_argument("--blending", action="store_true", help="Whether to generate data for blending.")
+
+    parser.add_argument(
+        "--num_bins", type=int, required=False, default=5, help="The number of bins for statistical features."
+    )
+
+    parser.add_argument(
+        "--num_clusters", type=int, required=False, default=5, help="The number of clusters for kmeans."
+    )
+
     args = parser.parse_args()
 
     rank: int = args.rank
@@ -138,6 +227,10 @@ def main() -> None:
     statistical_features: bool = args.statistics
     ordinal_probit: bool = args.op
     kmeans: bool = args.kmeans
+    stacking: bool = args.stacking
+    blending: bool = args.blending
+    num_bins: int = args.num_bins
+    num_clusters: int = args.num_clusters
 
     logger.info(
         f"Initialized the training procedure for the BFM with rank {rank} "
@@ -148,9 +241,25 @@ def main() -> None:
 
     dataset = RatingsDataset.load(dataset_name)
     training_procedure = BFMTrainingProcedure(
-        rank, 10, iterations, kfold, dataset, grouped, implicit, statistical_features, ordinal_probit, kmeans
+        rank,
+        num_bins,
+        num_clusters,
+        iterations,
+        kfold,
+        dataset,
+        grouped,
+        implicit,
+        statistical_features,
+        ordinal_probit,
+        kmeans,
     )
-    training_procedure.start_training()
+
+    if stacking:
+        training_procedure.generate_data_for_stacking()
+    elif blending:
+        training_procedure.generate_data_for_blending()
+    else:
+        training_procedure.start_training()
 
 
 if __name__ == "__main__":

@@ -14,12 +14,13 @@ class BayesianFactorizationMachine(AbstractModel, RatingPredictor):
         self,
         rank: int = 4,
         num_bins: int = 50,
+        num_clusters: int = 5,
         grouped: bool = False,
         implicit: bool = False,
         statistical_features: bool = False,
         kmeans: bool = False,
     ) -> None:
-        super().__init__(rank, num_bins, grouped, implicit, statistical_features, kmeans)
+        super().__init__(rank, num_bins, num_clusters, grouped, implicit, statistical_features, kmeans)
 
         self.model = MyFMRegressor(rank=rank, random_seed=42)
         self.train_dataset = None
@@ -34,6 +35,7 @@ class BayesianFactorizationMachine(AbstractModel, RatingPredictor):
     ) -> float:
         print("Training Bayesian Factorization Machine...")
 
+        self.train_dataset = train_dataset
         y_train = train_dataset.get_targets().reshape(1, -1)[0]
         y_test = test_dataset.get_targets().reshape(1, -1)[0]
 

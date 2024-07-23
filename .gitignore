@@ -8,6 +8,7 @@ __pycache__/
 
 **/*.pkl
 **/*.csv
+**/**/*.npz
 
 # Distribution / packaging
 .Python

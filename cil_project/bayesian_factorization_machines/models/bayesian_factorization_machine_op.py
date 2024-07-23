@@ -14,12 +14,13 @@ class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
         self,
         rank: int = 4,
         num_bins: int = 50,
+        num_clusters: int = 5,
         grouped: bool = False,
         implicit: bool = False,
         statistical_features: bool = False,
         kmeans: bool = False,
     ) -> None:
-        super().__init__(rank, num_bins, grouped, implicit, statistical_features, kmeans)
+        super().__init__(rank, num_bins, num_clusters, grouped, implicit, statistical_features, kmeans)
 
         self.model = MyFMOrderedProbit(rank=rank, random_seed=42)
         self.train_dataset = None
@@ -33,6 +34,7 @@ class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
     ) -> float:
         print("Training Bayesian Factorization Machine...")
 
+        self.train_dataset = train_dataset
         y_train = train_dataset.get_targets().reshape(1, -1)[0]
         # Since the model expects the ratings to be in the range [1, 5], we need to scale them to [0, 4]
         y_train = y_train - 1
@@ -54,7 +56,7 @@ class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
             group_shapes=group_shapes,
         )
 
-        p_ordinal = self.model.predict_proba(None, X_rel=x_rel_test)
+        p_ordinal = self.model.predict_proba(None, X_rel=x_rel_test, n_workers=8)
         y_pred = p_ordinal.dot(np.arange(1, 6))
 
         error = rmse(y_test, y_pred)
@@ -91,7 +93,7 @@ class BayesianFactorizationMachineOP(AbstractModel, RatingPredictor):
 
         pred_dataset = RatingsDataset(x, np.zeros((x.shape[0], 1)))
         x_rel = self.get_features(pred_dataset, self.train_dataset)
-        p_ordinal = self.model.predict_proba(None, X_rel=x_rel)
+        p_ordinal = self.model.predict_proba(None, X_rel=x_rel, n_workers=8)
         y_pred = p_ordinal.dot(np.arange(1, 6))
         return y_pred.reshape(-1, 1)
 

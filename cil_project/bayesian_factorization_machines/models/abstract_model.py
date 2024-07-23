@@ -21,6 +21,7 @@ class AbstractModel(ABC):
         self,
         rank: int = 4,
         num_bins: int = 50,
+        num_clusters: int = 5,
         grouped: bool = False,
         implicit: bool = False,
         statistical_features: bool = False,
@@ -38,7 +39,7 @@ class AbstractModel(ABC):
         self.implicit = implicit
         self.statistical_features = statistical_features
         self.num_bins = num_bins
-        self.num_clusters = 5
+        self.num_clusters = num_clusters
         self.kmeans = kmeans
 
     @abstractmethod
