@@ -16,6 +16,9 @@ class Baseline:
     def normalize_data_matrix(self, d_matrix: np.ndarray) -> np.ndarray:
         """
         Normalizes each column of data matrix to have mean 0 and standard deviation 1.
+
+        :param d_matrix: The data matrix to normalize.
+        :return: The normalized data matrix.
         """
         col_mu = np.nanmean(d_matrix, axis=0)
         col_sigma = np.nanstd(d_matrix, axis=0)

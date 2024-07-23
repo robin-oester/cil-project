@@ -22,6 +22,8 @@ class SVT(Baseline, RatingPredictor):
     def svt_matrix_completion(self, d_matrix: np.ndarray) -> None:
         """
         Singular Value Thresholding for matrix completion.
+
+        :param d_matrix: The normalized and zero-imputed data matrix.
         """
         max_iter = self.hyperparameters["max_iter"]
         eta = self.hyperparameters["eta"]
@@ -32,9 +34,7 @@ class SVT(Baseline, RatingPredictor):
         self.reconstructed_matrix = np.zeros((num_users, num_movies))
 
         for it in range(max_iter):
-            self.reconstructed_matrix[mask] = self.reconstructed_matrix[mask] + eta * (
-                d_matrix[mask] - self.reconstructed_matrix[mask]
-            )
+            self.reconstructed_matrix = self.reconstructed_matrix + eta * mask * (d_matrix - self.reconstructed_matrix)
             # perform shrinking
             u, s, vt = np.linalg.svd(self.reconstructed_matrix, full_matrices=False)
             s = (s - tau).clip(min=0)
@@ -51,6 +51,13 @@ class SVT(Baseline, RatingPredictor):
     def train(
         self, data_matrix: np.ndarray, test_m: np.ndarray = np.array([]), test_m_mask: np.ndarray = np.array([])
     ) -> None:
+        """
+        Training procedure for the SVT model.
+
+        :param data_matrix: The data matrix to train the model on.
+        :param test_m: The test data matrix to validate the model on.
+        :param test_m_mask: The mask of the test data matrix.
+        """
         self.test_m = test_m
         self.test_m_mask = test_m_mask
         if not np.isnan(data_matrix).any():  # If the matrix has already been zero-imputed
@@ -62,6 +69,12 @@ class SVT(Baseline, RatingPredictor):
         self.denormalize_and_clip_reconstructed_matrix()
 
     def predict(self, inputs: np.ndarray) -> np.ndarray:
+        """
+        Predict the ratings for the given inputs.
+
+        :param inputs: The inputs to predict the ratings for (shape: (N, 2)).
+        :return: The predicted ratings (shape: (N, 1)).
+        """
         if self.reconstructed_matrix.size == 0:
             raise ValueError("Model not trained. Please train the model first.")
         users = inputs[:, 0]

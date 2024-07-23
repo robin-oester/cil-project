@@ -22,6 +22,8 @@ class SVP(Baseline, RatingPredictor):
     def svp_matrix_completion(self, d_matrix: np.ndarray) -> None:
         """
         Singular Value Projection for matrix completion.
+
+        :param d_matrix: The normalized and zero-imputed data matrix.
         """
         k = self.hyperparameters["k"]
         max_iter = self.hyperparameters["max_iter"]
@@ -50,6 +52,13 @@ class SVP(Baseline, RatingPredictor):
     def train(
         self, data_matrix: np.ndarray, test_m: np.ndarray = np.array([]), test_m_mask: np.ndarray = np.array([])
     ) -> None:
+        """
+        Training procedure for the SVP model.
+
+        :param data_matrix: The data matrix to train the model on.
+        :param test_m: The test data matrix to validate the model on.
+        :param test_m_mask: The mask for the test data matrix.
+        """
         self.test_m = test_m
         self.test_m_mask = test_m_mask
         if not np.isnan(data_matrix).any():  # If the matrix has already been zero-imputed
@@ -61,6 +70,12 @@ class SVP(Baseline, RatingPredictor):
         self.denormalize_and_clip_reconstructed_matrix()
 
     def predict(self, inputs: np.ndarray) -> np.ndarray:
+        """
+        Predict the ratings for the given inputs.
+
+        :param inputs: The inputs to predict the ratings for (shape: (N, 2)).
+        :return: The predicted ratings (shape: (N, 1)).
+        """
         if self.reconstructed_matrix.size == 0:
             raise ValueError("Model not trained. Please train the model first.")
         users = inputs[:, 0]
