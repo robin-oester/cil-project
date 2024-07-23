@@ -4,6 +4,7 @@ import pathlib
 import re
 
 import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -61,3 +62,10 @@ class SubmissionDataset:
 
     def __len__(self) -> int:
         return len(self.predictions)
+
+    def get_data_frame(self) -> pd.DataFrame:
+        """
+        Returns the dataset as a pandas DataFrame.
+        """
+        df = pd.DataFrame(self.inputs, columns=["user", "movie"])
+        return df
