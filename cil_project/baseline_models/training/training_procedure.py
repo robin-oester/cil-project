@@ -1,7 +1,7 @@
 import argparse
 import logging
 
-from cil_project.baseline_models.models import ALS, SVP, SVT, Baseline
+from cil_project.baseline_models.base_models import ALS, SVP, SVT, Baseline
 from cil_project.dataset import RatingsDataset, SubmissionDataset
 from cil_project.ensembling.utils import write_predictions_to_csv
 from cil_project.utils import FULL_SERIALIZED_DATASET_NAME, SUBMISSION_FILE_NAME
@@ -146,7 +146,7 @@ def train_model_for_blending(dataset_name: str, test_dataset_name: str) -> None:
     logger.info("Blending done.")
 
 
-def main():
+def main() -> None:
     """
     Main method for the training procedure.
     """
