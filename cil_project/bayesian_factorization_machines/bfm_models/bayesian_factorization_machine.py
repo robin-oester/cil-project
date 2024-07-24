@@ -2,7 +2,6 @@ import logging
 
 import numpy as np
 from cil_project.dataset import RatingsDataset
-from cil_project.ensembling import RatingPredictor
 from cil_project.utils import MAX_RATING, MIN_RATING, rmse
 from myfm import MyFMRegressor
 
@@ -11,7 +10,7 @@ from .abstract_model import AbstractModel
 logger = logging.getLogger(__name__)
 
 
-class BayesianFactorizationMachine(AbstractModel, RatingPredictor):
+class BayesianFactorizationMachine(AbstractModel):
     def __init__(
         self,
         rank: int = 4,
@@ -28,7 +27,6 @@ class BayesianFactorizationMachine(AbstractModel, RatingPredictor):
         self.train_dataset = None
 
     # pylint: disable=R0914
-
     def train(
         self,
         train_dataset: RatingsDataset,
@@ -86,11 +84,11 @@ class BayesianFactorizationMachine(AbstractModel, RatingPredictor):
             group_shapes=group_shapes,
         )
 
-    def predict(self, x: np.ndarray) -> np.ndarray:
+    def predict(self, inputs: np.ndarray) -> np.ndarray:
         if self.train_dataset is None:
             raise ValueError("Model is not trained yet. Call the 'train' method to train the model.")
 
-        pred_dataset = RatingsDataset(x, np.zeros((x.shape[0], 1)))
+        pred_dataset = RatingsDataset(inputs, np.zeros((inputs.shape[0], 1)))
         x_rel = self.get_features(pred_dataset, self.train_dataset)
         y_pred = self.model.predict(None, X_rel=x_rel, n_workers=8)
         return np.clip(y_pred, MIN_RATING, MAX_RATING).reshape(-1, 1)

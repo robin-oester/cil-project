@@ -24,7 +24,7 @@ In order to run the training procedures, the following command-line arguments ar
 
 All options can be combined arbitrarily. Typical usage is then:
 
-./python <script_name> [command line arguments]
+python ./<script_name> [command line arguments]
 """
 
 

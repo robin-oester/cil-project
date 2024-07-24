@@ -18,7 +18,7 @@ The factor needs to be in [0, 1] for a simple split and an integer greater than 
 The dataset can optionally be shuffled before splitting.
 Typical usage:
 
-./dataset_creator.py -n <name> --split <split> [--base <base dataset>] [--shuffle]
+python ./dataset_creator.py -n <name> --split <split> [--base <base dataset>] [--shuffle]
 """
 
 

@@ -1,10 +1,14 @@
-# Computational Intelligence Lab 2024
+# Computational Intelligence Lab 2024 (Team Winterhold)
 <div align="center">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 </div>
-Project work for the ETHZ CIL Collaborative Filtering 2024 competition held on kaggle. The goal of the project is to predict the movie ratings for given (user, movie)-pairs.
+Project work for the ETH Zurich CIL Collaborative Filtering 2024 competition held on kaggle. 
+For a total of 10'000 users and 1'000 movies, the dataset consists of 1'176'952 ratings ranging from 1 to 5.
+Our goal is to predict the ratings for unobserved (user, movie)-pairs.
+For this purpose, we implement an ensemble approach combining predictions from various models including baseline models such as ALS, SVT, SVP, and novel ideas in neural collaborative filtering and Bayesian factorization machines.
+Using stacking, we achieve a public score on a hidden test set of 0.9649.
 
 ## ⚡️ Quickstart
 For local development, you need to have [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) installed. Then, run
@@ -37,11 +41,11 @@ In order to keep the project organized, we propose the following workflow for co
 
 ## 📂 Project Organization
 - ```data/data_train.csv``` holds the training data with (Id,Prediction) tuples. The Id consists of a given (user, movie) rating. For example r44_c1 refers to the rating of the 44-th user for the 1st movie. The movie ratings are integer values ranging from 1-5.
-- ```data/sampleSubmission.csv``` is a sample submission file. It holds the ids, for which the predictions have to be made.
+- ```data/sampleSubmission.csv``` is a sample submission file. It holds the Ids of the hidden test set, for which the predictions have to be made.
 
 ## ▶️ Run Experiments
 
-Here, you can find the scripts used to reproduce the results of our different methods. Depending on your system, you might need to replace forward slashes "/" with backward slashes "\".
+Here, you can find the scripts used to reproduce the results of our different methods. Depending on your system, you might need to replace forward slashes "/" with backward slashes "\\".
 
 ### Dataset Preparation
 This allows the user to split the dataset such that it can be used for blending or stacking.
@@ -65,7 +69,7 @@ where `[command line arguments]` can be the following:
 - `--verbose` - prints additional information during training and testing.
 
 ### Neural Collaborative Filtering (NCF) & SVD++
-This are all methods that involve training of neural networks.
+These are all methods that involve training of neural networks.
 Therefore, they share a common structure and can be run with the same command.
 ```bash
 python cil_project/neural_filtering/training/<procedure> [command line arguments]
@@ -108,7 +112,7 @@ Additionally, each BFM model can be run in blending or stacking mode. If none of
 - `--stacking <dataset_base_name> <val_dataset_base_name>` - prepares the model to be used for stacking by performing k-fold cross-validation and predicting the submission dataset.
 - `--dataset <dataset>` - specifies the dataset to be used for training. If none specified, trains the model on the entire dataset.
 
-In order to reproduce our results, please consider the following models:
+In order to reproduce our results, consider the following models:
 BFM (Base):
 ```bash
 python cil_project/bayesian_factorization_machines/training/bfm_training_procedure.py --rank 15 --iterations 1000
@@ -130,7 +134,7 @@ python cil_project/bayesian_factorization_machines/training/bfm_training_procedu
 ```
 
 ### Ensembling
-The base command for performing an ensemble of method is the following:
+The base command for performing an ensemble of methods is the following:
 ```bash
 python cil_project/run_ensembler.py --models <model1> <model2> ... [--regressor <regressor>] [--val <val_name>]
 ```

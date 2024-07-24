@@ -24,7 +24,7 @@ There are 3 types of ensemble implemented:
 3. Stacking: Stack the predictions of different models in K-fold fashion using multiple validation datasets.
 Typical usage:
 
-./ensembler.py --models <model1> <model2> ... [--regressor <regressor>] [--val <val_name>]
+python ./run_ensembler.py --models <model1> <model2> ... [--regressor <regressor>] [--val <val_name>]
 """
 
 

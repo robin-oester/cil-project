@@ -25,6 +25,7 @@ In order to run the training procedures, the following command-line arguments ar
 --verbose: Enable verbosity.
 
 Typical usage:
+
 ./python <script_name> [command line arguments]
 """
 

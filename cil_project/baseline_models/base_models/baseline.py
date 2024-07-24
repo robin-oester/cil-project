@@ -6,6 +6,10 @@ from cil_project.ensembling import RatingPredictor
 
 
 class Baseline(RatingPredictor):
+    """
+    Abstract class for all baseline models.
+    """
+
     def __init__(self) -> None:
         self.hyperparameters: dict[str, Any] = {}
         self.reconstructed_matrix: np.ndarray = np.array([])
@@ -28,6 +32,7 @@ class Baseline(RatingPredictor):
         :param d_matrix: The data matrix to normalize.
         :return: The normalized data matrix.
         """
+
         col_mu = np.nanmean(d_matrix, axis=0)
         col_sigma = np.nanstd(d_matrix, axis=0)
         d_matrix_norm = (d_matrix - col_mu) / col_sigma

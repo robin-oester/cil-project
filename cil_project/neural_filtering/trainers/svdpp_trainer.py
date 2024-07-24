@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 class SVDPPTrainer(AbstractTrainer):
     """
-    Class used to train svdpp.
+    Class used to train SVD++.
     """
 
     # pylint: disable=too-many-locals
@@ -47,6 +47,7 @@ class SVDPPTrainer(AbstractTrainer):
                     targets = targets.to(self.device)
                     self.optimizer.zero_grad()
                     outputs = self.model(inputs)
+
                     # ------------ Start loss computation over the batch
                     base_loss = loss_func(outputs, targets)
                     users = inputs[:, 0]
@@ -58,6 +59,7 @@ class SVDPPTrainer(AbstractTrainer):
                     total_loss = base_loss + reg_pu + reg_qi
                     total_loss = total_loss.mean()
                     # ------------ End loss computation over the batch
+
                     total_loss.backward()
                     self.optimizer.step()
 

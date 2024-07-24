@@ -24,6 +24,7 @@ class SVP(Baseline):
 
         :param d_matrix: The normalized and zero-imputed data matrix.
         """
+
         k = self.hyperparameters["k"]
         max_iter = self.hyperparameters["max_iter"]
         eta = self.hyperparameters["eta"]
@@ -58,6 +59,7 @@ class SVP(Baseline):
         :param test_m: The test data matrix to validate the model on.
         :param test_m_mask: The mask for the test data matrix.
         """
+
         self.test_m = test_m
         self.test_m_mask = test_m_mask
         if not np.isnan(data_matrix).any():  # If the matrix has already been zero-imputed
@@ -75,6 +77,7 @@ class SVP(Baseline):
         :param inputs: The inputs to predict the ratings for (shape: (N, 2)).
         :return: The predicted ratings (shape: (N, 1)).
         """
+
         if self.reconstructed_matrix.size == 0:
             raise ValueError("Model not trained. Please train the model first.")
         users = inputs[:, 0]

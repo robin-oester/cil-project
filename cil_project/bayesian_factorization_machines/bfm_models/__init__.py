@@ -1,6 +1,7 @@
 import os
 
-from .abstract_model import AbstractModel  # noqa: F401
+from .bayesian_factorization_machine import BayesianFactorizationMachine  # noqa: F401
+from .bayesian_factorization_machine_op import BayesianFactorizationMachineOP  # noqa: F401
 
 files = os.listdir(os.path.dirname(__file__))
 files.remove("__init__.py")

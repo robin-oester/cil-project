@@ -1,10 +1,8 @@
 import argparse
 import logging
 
-from cil_project.bayesian_factorization_machines.bfm_models.bayesian_factorization_machine import (
+from cil_project.bayesian_factorization_machines.bfm_models import (
     BayesianFactorizationMachine,
-)
-from cil_project.bayesian_factorization_machines.bfm_models.bayesian_factorization_machine_op import (
     BayesianFactorizationMachineOP,
 )
 from cil_project.dataset import BalancedKFold, RatingsDataset, SubmissionDataset
@@ -19,10 +17,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 """
-This script is used to train the Bayesian Factorization Machine with the specified rank and number of iterations. \
-    Optionally, grouping, implicit features and ordinal probit can be enabled.
+This script is used to train the Bayesian Factorization Machine with the specified rank and number of iterations.
+Optionally, grouping, implicit features and ordinal probit can be enabled.
 
-./bfm_training_procedure.py --rank <rank> --iterations <iterations> [--dataset <dataset>]
+Typical usage:
+
+python ./bfm_training_procedure.py --rank <RANK> --iterations <ITERATIONS> [--dataset <DATASET>]
 """
 
 
