@@ -8,7 +8,7 @@ Project work for the ETH Zurich CIL Collaborative Filtering 2024 competition hel
 For a total of 10'000 users and 1'000 movies, the dataset consists of 1'176'952 ratings ranging from 1 to 5.
 Our goal is to predict the ratings for unobserved (user, movie)-pairs.
 For this purpose, we implement an ensemble approach combining predictions from various models including baseline models such as ALS, SVT, SVP, and novel ideas in neural collaborative filtering and Bayesian factorization machines.
-Using stacking, we achieve a public score on a hidden test set of 0.9649.
+Using stacking, we achieve a public score on a hidden test set of 0.9649. Find the report [here](report.pdf).
 
 ## ⚡️ Quickstart
 For local development, you need to have [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) installed. Then, run
@@ -112,7 +112,8 @@ Additionally, each BFM model can be run in blending or stacking mode. If none of
 - `--stacking <dataset_base_name> <val_dataset_base_name>` - prepares the model to be used for stacking by performing k-fold cross-validation and predicting the submission dataset.
 - `--dataset <dataset>` - specifies the dataset to be used for training. If none specified, trains the model on the entire dataset.
 
-In order to reproduce our results, consider the following models:
+In order to reproduce our results, consider the following models.
+
 BFM (Base):
 ```bash
 python cil_project/bayesian_factorization_machines/training/bfm_training_procedure.py --rank 15 --iterations 1000
