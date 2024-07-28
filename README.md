@@ -4,11 +4,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 </div>
+
 Project work for the ETH Zurich CIL Collaborative Filtering 2024 competition held on kaggle. 
 For a total of 10'000 users and 1'000 movies, the dataset consists of 1'176'952 ratings ranging from 1 to 5.
 Our goal is to predict the ratings for unobserved (user, movie)-pairs.
 For this purpose, we implement an ensemble approach combining predictions from various models including baseline models such as ALS, SVT, SVP, and novel ideas in neural collaborative filtering and Bayesian factorization machines.
-Using stacking, we achieve a public score on a hidden test set of 0.9649. Find the report [here](report.pdf).
+Using stacking, we achieve a public score on a hidden test set of 0.9649. See the [report](report.pdf).
 
 ## ⚡️ Quickstart
 For local development, you need to have [conda](https://conda.io/projects/conda/en/latest/user-guide/install/index.html) installed. Then, run
