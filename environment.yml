@@ -12,7 +12,8 @@ dependencies:
   - python>=3.10
   - numpy
   - pandas
-  - pip
+  - pip:
+      - myfm
   - tqdm
   - scikit-learn
   - pytorch::pytorch

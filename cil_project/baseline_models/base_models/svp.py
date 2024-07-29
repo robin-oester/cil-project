@@ -1,7 +1,6 @@
 import logging
 
 import numpy as np
-from cil_project.ensembling import RatingPredictor
 from cil_project.utils import masked_rmse
 
 from .baseline import Baseline
@@ -9,7 +8,7 @@ from .baseline import Baseline
 logger = logging.getLogger(__name__)
 
 
-class SVP(Baseline, RatingPredictor):
+class SVP(Baseline):
     def __init__(self, k: int = 4, max_iter: int = 20, eta: float = 1.3315789473684212, verbose: bool = False):
         super().__init__()  # Initialize the Baseline class
         self.u: np.ndarray = np.array([])
@@ -25,6 +24,7 @@ class SVP(Baseline, RatingPredictor):
 
         :param d_matrix: The normalized and zero-imputed data matrix.
         """
+
         k = self.hyperparameters["k"]
         max_iter = self.hyperparameters["max_iter"]
         eta = self.hyperparameters["eta"]
@@ -59,6 +59,7 @@ class SVP(Baseline, RatingPredictor):
         :param test_m: The test data matrix to validate the model on.
         :param test_m_mask: The mask for the test data matrix.
         """
+
         self.test_m = test_m
         self.test_m_mask = test_m_mask
         if not np.isnan(data_matrix).any():  # If the matrix has already been zero-imputed
@@ -76,6 +77,7 @@ class SVP(Baseline, RatingPredictor):
         :param inputs: The inputs to predict the ratings for (shape: (N, 2)).
         :return: The predicted ratings (shape: (N, 1)).
         """
+
         if self.reconstructed_matrix.size == 0:
             raise ValueError("Model not trained. Please train the model first.")
         users = inputs[:, 0]
